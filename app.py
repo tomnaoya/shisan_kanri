@@ -30,9 +30,8 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=8)
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 
-# CORS – allow frontend origin(s)
-FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN", "*")
-CORS(app, resources={r"/api/*": {"origins": FRONTEND_ORIGIN}}, supports_credentials=True)
+# CORS – allow all origins for API
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=False)
 
 # ---------------------------------------------------------------------------
 # Models
