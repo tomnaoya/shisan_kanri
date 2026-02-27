@@ -351,17 +351,23 @@ function AssetsPage(){
     const[showForm,setShowForm]=useState(false);const[editA,setEditA]=useState(null);const[confirmDel,setConfirmDel]=useState(null);
     const[showImport,setShowImport]=useState(false);
     const stRef=useRef(null);
+    const searchRef=useRef("");
+    const catRef=useRef("");
+    const locRef=useRef("");
 
-    const load=useCallback(async(p)=>{setLd(true);
+    const load=useCallback(async(p,opts={})=>{setLd(true);
+        const s=opts.search!==undefined?opts.search:searchRef.current;
+        const c=opts.category!==undefined?opts.category:catRef.current;
+        const l=opts.location!==undefined?opts.location:locRef.current;
         const params=new URLSearchParams({page:p||page,per_page:50});
-        if(search)params.set("search",search);if(fCat)params.set("category",fCat);if(fLoc)params.set("location",fLoc);
+        if(s)params.set("search",s);if(c)params.set("category",c);if(l)params.set("location",l);
         try{const r=await apiFetch("/assets?"+params);const d=await r.json();setAssets(d.items);setTotal(d.total);setPages(d.pages);setPage(d.page);}catch{}
         setLd(false);
-    },[search,fCat,fLoc,page]);
+    },[page]);
 
-    useEffect(()=>{load(1);},[fCat,fLoc]);
+    useEffect(()=>{load(1);},[]);
 
-    function onSearch(e){const v=e.target.value;setSearch(v);clearTimeout(stRef.current);stRef.current=setTimeout(()=>load(1),400);}
+    function onSearch(e){const v=e.target.value;setSearch(v);searchRef.current=v;clearTimeout(stRef.current);stRef.current=setTimeout(()=>load(1,{search:v}),400);}
 
     async function handleDel(){if(!confirmDel)return;await apiFetch("/assets/"+confirmDel.id,{method:"DELETE"});toast("削除しました");setConfirmDel(null);load(page);}
 
@@ -384,8 +390,8 @@ function AssetsPage(){
         </div></div>
         <div className="card" style={{marginBottom:24}}><div className="card-body" style={{padding:16}}><div className="filter-bar">
             <div className="search-box"><IC.Search/><input className="form-input" placeholder="名前・管理番号・管理者で検索…" value={search} onChange={onSearch}/></div>
-            <select className="form-input filter-select" value={fCat} onChange={e=>{setFCat(e.target.value);}}><option value="">全種別</option>{CATEGORIES.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select>
-            <select className="form-input filter-select" value={fLoc} onChange={e=>{setFLoc(e.target.value);}}><option value="">全設置場所</option>{LOCATIONS.map(l=><option key={l} value={l}>{l}</option>)}</select>
+            <select className="form-input filter-select" value={fCat} onChange={e=>{const v=e.target.value;setFCat(v);catRef.current=v;load(1,{category:v});}}><option value="">全種別</option>{CATEGORIES.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select>
+            <select className="form-input filter-select" value={fLoc} onChange={e=>{const v=e.target.value;setFLoc(v);locRef.current=v;load(1,{location:v});}}><option value="">全設置場所</option>{LOCATIONS.map(l=><option key={l} value={l}>{l}</option>)}</select>
         </div></div></div>
         <div className="card">{ld?<div className="loading-center"><span className="spinner"/></div>
         :assets.length===0?<div className="empty-state"><IC.Box/><h3>資産が見つかりません</h3><p>「新規登録」から資産を登録してください</p><button className="btn btn-primary btn-sm" onClick={()=>{setEditA(null);setShowForm(true);}}><IC.Plus/> 新規登録</button></div>
