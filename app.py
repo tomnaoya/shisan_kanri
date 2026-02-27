@@ -30,8 +30,9 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=8)
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 
-# CORS – allow all origins for API
-CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=False)
+# CORS – allow frontend origin(s)
+FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN", "*")
+CORS(app, resources={r"/api/*": {"origins": FRONTEND_ORIGIN}}, supports_credentials=True)
 
 # ---------------------------------------------------------------------------
 # Models
@@ -414,6 +415,153 @@ def download_assets():
     return send_file(buf, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                      as_attachment=True,
                      download_name=f"assets_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx")
+
+
+# ---------------------------------------------------------------------------
+# CSV Import (Bulk Upload)
+# ---------------------------------------------------------------------------
+
+IMPORT_HEADERS = [
+    "管理番号", "資産名", "種別", "種別(その他)", "設置場所", "設置場所(その他)",
+    "設置部室", "設置部室(その他)", "購入元", "購入金額", "購入日",
+    "保守有無", "保守情報", "保守リンク", "減価償却期間(月)", "リース期間(月)",
+    "管理者", "備考",
+]
+
+CATEGORY_REVERSE = {"医療機器": "medical", "電子機器": "electronic", "その他": "other"}
+
+
+@app.route("/api/assets/upload-template", methods=["GET"])
+@jwt_required()
+def download_template():
+    """Download empty CSV template for bulk import."""
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(IMPORT_HEADERS)
+    # Write one example row
+    writer.writerow([
+        "MED-001", "超音波診断装置", "医療機器", "", "豊洲院", "",
+        "小児科1診", "", "GEヘルスケア", "4800000", "2024-04-15",
+        "有", "年間保守契約", "https://example.com", "72", "",
+        "佐藤医師", "備考メモ",
+    ])
+    output.seek(0)
+    buf = io.BytesIO(output.getvalue().encode("utf-8-sig"))
+    return send_file(buf, mimetype="text/csv", as_attachment=True,
+                     download_name="import_template.csv")
+
+
+@app.route("/api/assets/upload", methods=["POST"])
+@jwt_required()
+def upload_assets():
+    """Bulk import assets from CSV file."""
+    if "file" not in request.files:
+        return jsonify({"error": "ファイルが選択されていません"}), 400
+
+    file = request.files["file"]
+    if not file.filename.endswith(".csv"):
+        return jsonify({"error": "CSVファイルのみ対応しています"}), 400
+
+    try:
+        # Read CSV with BOM handling
+        raw = file.read()
+        # Try utf-8-sig first, then shift_jis
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            text = raw.decode("shift_jis")
+
+        reader = csv.DictReader(io.StringIO(text))
+
+        created = 0
+        skipped = 0
+        errors = []
+
+        for i, row in enumerate(reader, start=2):
+            code = (row.get("管理番号") or "").strip()
+            name = (row.get("資産名") or "").strip()
+
+            if not code or not name:
+                skipped += 1
+                continue
+
+            # Skip if management_code already exists
+            if Asset.query.filter_by(management_code=code).first():
+                errors.append(f"行{i}: 管理番号「{code}」は既に登録済み")
+                skipped += 1
+                continue
+
+            # Parse category
+            cat_label = (row.get("種別") or "").strip()
+            category = CATEGORY_REVERSE.get(cat_label, "other")
+            category_other = (row.get("種別(その他)") or "").strip()
+            if cat_label and cat_label not in CATEGORY_REVERSE:
+                category = "other"
+                category_other = cat_label
+
+            # Parse location
+            location = (row.get("設置場所") or "").strip()
+            location_other = (row.get("設置場所(その他)") or "").strip()
+            if not location:
+                errors.append(f"行{i}: 設置場所が空です")
+                skipped += 1
+                continue
+
+            # Parse department (default to "その他" if empty)
+            department = (row.get("設置部室") or "").strip()
+            department_other = (row.get("設置部室(その他)") or "").strip()
+            if not department:
+                department = "その他"
+
+            # Parse numeric fields
+            def parse_int(val):
+                val = (val or "").strip().replace(",", "")
+                if not val:
+                    return None
+                try:
+                    return int(float(val))
+                except (ValueError, TypeError):
+                    return None
+
+            # Parse maintenance flag
+            maint_str = (row.get("保守有無") or "").strip()
+            has_maintenance = maint_str in ("有", "あり", "○", "1", "true", "True", "YES", "yes")
+
+            asset = Asset(
+                management_code=code,
+                name=name,
+                category=category,
+                category_other=category_other or None,
+                location=location,
+                location_other=location_other or None,
+                department=department,
+                department_other=department_other or None,
+                purchase_from=(row.get("購入元") or "").strip() or None,
+                purchase_price=parse_int(row.get("購入金額")),
+                purchase_date=(row.get("購入日") or "").strip() or None,
+                has_maintenance=has_maintenance,
+                maintenance_info=(row.get("保守情報") or "").strip() or None,
+                maintenance_link=(row.get("保守リンク") or "").strip() or None,
+                depreciation_period_months=parse_int(row.get("減価償却期間(月)")),
+                lease_period_months=parse_int(row.get("リース期間(月)")),
+                manager=(row.get("管理者") or "").strip() or None,
+                notes=(row.get("備考") or "").strip() or None,
+            )
+            db.session.add(asset)
+            created += 1
+
+        db.session.commit()
+
+        return jsonify({
+            "message": f"{created}件を登録しました",
+            "created": created,
+            "skipped": skipped,
+            "errors": errors[:20],  # Return first 20 errors max
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"CSVの処理中にエラーが発生しました: {str(e)}"}), 400
 
 
 # ---------------------------------------------------------------------------
