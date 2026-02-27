@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>資産管理システム</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-primary: #F5F6F8;
+            --bg-card: #FFFFFF;
+            --bg-sidebar: #1A2332;
+            --bg-sidebar-hover: #243044;
+            --bg-sidebar-active: #2B5797;
+            --text-primary: #1A2332;
+            --text-secondary: #5A6577;
+            --text-sidebar: #A8B4C6;
+            --text-sidebar-active: #FFFFFF;
+            --accent: #2B5797;
+            --accent-light: #EBF0F7;
+            --accent-hover: #1E3F6F;
+            --danger: #C0392B;
+            --danger-light: #FDEDEC;
+            --success: #27AE60;
+            --success-light: #E8F8F0;
+            --warning: #F39C12;
+            --warning-light: #FEF9E7;
+            --border: #E2E6EC;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+            --radius: 8px;
+            --radius-lg: 12px;
+            --transition: 0.2s ease;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', 'IBM Plex Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Login Page */
+        .login-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1A2332 0%, #2B5797 50%, #1A2332 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .login-wrapper::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(ellipse at 30% 50%, rgba(43,87,151,0.3) 0%, transparent 60%),
+                        radial-gradient(ellipse at 70% 50%, rgba(26,35,50,0.4) 0%, transparent 60%);
+            animation: loginBg 20s ease infinite alternate;
+        }
+        @keyframes loginBg { from { transform: rotate(0deg); } to { transform: rotate(10deg); } }
+
+        .login-card {
+            position: relative; z-index: 1;
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            padding: 48px 40px;
+            width: 400px;
+            max-width: 90vw;
+            animation: fadeUp 0.5s ease;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .login-card h1 {
+            font-size: 20px; font-weight: 700;
+            color: var(--accent);
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .login-card .subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 32px;
+        }
+        .login-card .logo-icon {
+            display: flex; justify-content: center; margin-bottom: 20px;
+        }
+        .login-card .logo-icon svg { width: 48px; height: 48px; fill: var(--accent); }
+
+        /* Form Elements */
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block;
+            font-size: 13px; font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        .form-group label .required {
+            color: var(--danger); margin-left: 4px; font-size: 11px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color var(--transition), box-shadow var(--transition);
+            background: #FAFBFC;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(43,87,151,0.12);
+            background: #fff;
+        }
+        .form-input::placeholder { color: #B0B8C4; }
+        select.form-input { cursor: pointer; appearance: auto; }
+        textarea.form-input { resize: vertical; min-height: 80px; }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        @media (max-width: 768px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 20px;
+            border: none; border-radius: 6px;
+            font-size: 14px; font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all var(--transition);
+            text-decoration: none;
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+        .btn-secondary { background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--border); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: #A93226; }
+        .btn-ghost { background: transparent; color: var(--accent); }
+        .btn-ghost:hover { background: var(--accent-light); }
+        .btn-sm { padding: 6px 14px; font-size: 13px; }
+        .btn-lg { padding: 12px 28px; font-size: 15px; width: 100%; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Layout */
+        .app-layout { display: flex; min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-sidebar);
+            color: var(--text-sidebar);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+        .sidebar-brand {
+            padding: 24px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .sidebar-brand h2 {
+            font-size: 16px; font-weight: 600;
+            color: #fff;
+        }
+        .sidebar-brand span { font-size: 11px; color: var(--text-sidebar); display: block; margin-top: 2px; }
+        .sidebar-nav { flex: 1; padding: 12px 8px; }
+        .sidebar-nav-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all var(--transition);
+            margin-bottom: 2px;
+            border: none; background: none;
+            color: var(--text-sidebar);
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+        }
+        .sidebar-nav-item:hover { background: var(--bg-sidebar-hover); color: #fff; }
+        .sidebar-nav-item.active { background: var(--bg-sidebar-active); color: var(--text-sidebar-active); }
+        .sidebar-nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .sidebar-footer {
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .sidebar-footer button {
+            background: none; border: none;
+            color: var(--text-sidebar); font-size: 13px;
+            cursor: pointer; display: flex; align-items: center; gap: 8px;
+            font-family: inherit;
+            padding: 6px 0;
+        }
+        .sidebar-footer button:hover { color: #fff; }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 240px;
+            padding: 28px 32px;
+            min-height: 100vh;
+        }
+
+        /* Page Header */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+        .page-header h1 { font-size: 22px; font-weight: 600; }
+        .page-header-actions { display: flex; gap: 10px; align-items: center; }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+        }
+        .card-body { padding: 24px; }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            padding: 20px;
+            display: flex; align-items: flex-start; gap: 16px;
+            transition: transform var(--transition);
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .stat-icon {
+            width: 44px; height: 44px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .stat-icon svg { width: 22px; height: 22px; }
+        .stat-icon.blue { background: var(--accent-light); }
+        .stat-icon.blue svg { fill: var(--accent); stroke: var(--accent); }
+        .stat-icon.green { background: var(--success-light); }
+        .stat-icon.green svg { fill: var(--success); stroke: var(--success); }
+        .stat-icon.orange { background: var(--warning-light); }
+        .stat-icon.orange svg { fill: var(--warning); stroke: var(--warning); }
+        .stat-icon.red { background: var(--danger-light); }
+        .stat-icon.red svg { fill: var(--danger); stroke: var(--danger); }
+        .stat-info h3 { font-size: 24px; font-weight: 700; line-height: 1.2; }
+        .stat-info p { font-size: 13px; color: var(--text-secondary); }
+
+        /* Table */
+        .table-wrapper { overflow-x: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        thead th {
+            background: #F8F9FB;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            border-bottom: 2px solid var(--border);
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+        }
+        thead th:hover { color: var(--accent); }
+        tbody td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #F0F2F5;
+            vertical-align: middle;
+        }
+        tbody tr { transition: background var(--transition); }
+        tbody tr:hover { background: #F8F9FB; }
+
+        /* Badges */
+        .badge {
+            display: inline-flex; align-items: center;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-medical { background: #EBF0F7; color: var(--accent); }
+        .badge-electronic { background: var(--success-light); color: var(--success); }
+        .badge-other { background: #F0F0F0; color: #666; }
+        .badge-yes { background: var(--success-light); color: var(--success); }
+        .badge-no { background: #F0F0F0; color: #999; }
+
+        /* Filter Bar */
+        .filter-bar {
+            display: flex; gap: 12px; flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .filter-bar .search-box {
+            flex: 1; min-width: 200px;
+            position: relative;
+        }
+        .filter-bar .search-box input {
+            padding-left: 38px;
+        }
+        .filter-bar .search-box svg {
+            position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+            width: 16px; height: 16px; stroke: #B0B8C4;
+        }
+        .filter-select { min-width: 140px; }
+
+        /* Pagination */
+        .pagination {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .pagination-btns { display: flex; gap: 4px; }
+        .pagination-btns button {
+            width: 34px; height: 34px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #fff;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px;
+            transition: all var(--transition);
+        }
+        .pagination-btns button:hover { border-color: var(--accent); color: var(--accent); }
+        .pagination-btns button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .pagination-btns button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 200;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            width: 680px;
+            max-width: 92vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+        .modal-header h2 { font-size: 17px; font-weight: 600; }
+        .modal-close {
+            width: 32px; height: 32px;
+            border: none; background: none;
+            cursor: pointer; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-secondary);
+            transition: all var(--transition);
+        }
+        .modal-close:hover { background: var(--bg-primary); color: var(--text-primary); }
+        .modal-body { padding: 24px; }
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex; justify-content: flex-end; gap: 10px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed; top: 20px; right: 20px;
+            padding: 14px 20px;
+            border-radius: var(--radius);
+            font-size: 14px;
+            z-index: 300;
+            animation: slideIn 0.3s ease;
+            box-shadow: var(--shadow-md);
+        }
+        @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast-success { background: var(--success); color: #fff; }
+        .toast-error { background: var(--danger); color: #fff; }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center; padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+        .empty-state svg { width: 56px; height: 56px; stroke: var(--border); margin-bottom: 16px; }
+        .empty-state h3 { font-size: 16px; font-weight: 500; margin-bottom: 6px; color: var(--text-primary); }
+        .empty-state p { font-size: 14px; margin-bottom: 20px; }
+
+        /* Error / Alert */
+        .alert {
+            padding: 12px 16px; border-radius: 6px; font-size: 13px;
+            margin-bottom: 16px;
+        }
+        .alert-error { background: var(--danger-light); color: var(--danger); border: 1px solid #F5C6CB; }
+
+        /* Responsive */
+        .mobile-menu-btn {
+            display: none; position: fixed; top: 16px; left: 16px; z-index: 110;
+            width: 40px; height: 40px; border-radius: 8px;
+            background: var(--bg-sidebar); border: none;
+            color: #fff; cursor: pointer;
+            align-items: center; justify-content: center;
+        }
+        @media (max-width: 900px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 20px 16px; padding-top: 60px; }
+            .mobile-menu-btn { display: flex; }
+        }
+
+        /* Spinner */
+        .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #ccc; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Confirm dialog */
+        .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef, createContext, useContext } = React;
+
+// ===========================================================================
+// Configuration – change this to your Render API URL
+// ===========================================================================
+const API_BASE = localStorage.getItem("api_base") || "http://localhost:5000";
+
+// ===========================================================================
+// Constants
+// ===========================================================================
+const LOCATIONS = [
+    "豊洲院", "勝どき院", "田町芝浦院", "ガーデン院小児耳鼻",
+    "ガーデン院皮膚", "柏院", "管理部", "その他",
+];
+
+const CATEGORIES = [
+    { value: "medical", label: "医療機器" },
+    { value: "electronic", label: "電子機器" },
+    { value: "other", label: "その他" },
+];
+
+const CATEGORY_MAP = { medical: "医療機器", electronic: "電子機器", other: "その他" };
+
+// ===========================================================================
+// API Helper
+// ===========================================================================
+function apiUrl(path) { return `${API_BASE}/api${path}`; }
+
+async function apiFetch(path, options = {}) {
+    const token = sessionStorage.getItem("token");
+    const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(apiUrl(path), { ...options, headers });
+    if (res.status === 401) {
+        sessionStorage.removeItem("token");
+        window.location.reload();
+        throw new Error("認証エラー");
+    }
+    return res;
+}
+
+// ===========================================================================
+// Toast Context
+// ===========================================================================
+const ToastContext = createContext();
+function ToastProvider({ children }) {
+    const [toast, setToast] = useState(null);
+    const show = useCallback((msg, type = "success") => {
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 3000);
+    }, []);
+    return (
+        <ToastContext.Provider value={show}>
+            {children}
+            {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+        </ToastContext.Provider>
+    );
+}
+function useToast() { return useContext(ToastContext); }
+
+// ===========================================================================
+// Icons (inline SVG)
+// ===========================================================================
+const Icons = {
+    Dashboard: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
+    List: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg>,
+    Plus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+    Download: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+    Search: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+    Settings: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+    Logout: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+    Edit: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+    Trash: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
+    X: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+    Menu: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
+    Box: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>,
+    Shield: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+    Wrench: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>,
+    Gear: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M2 12h1m18 0h1M12 2v1m0 18v1"/></svg>,
+};
+
+// ===========================================================================
+// Login Screen
+// ===========================================================================
+function LoginScreen({ onLogin }) {
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError("");
+        try {
+            const res = await fetch(apiUrl("/auth/login"), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "ログインに失敗しました");
+            sessionStorage.setItem("token", data.access_token);
+            onLogin(data.user);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="login-wrapper">
+            <form className="login-card" onSubmit={handleSubmit}>
+                <div className="logo-icon">
+                    <svg viewBox="0 0 48 48"><path d="M24 4L6 14v20l18 10 18-10V14L24 4zm0 4.5l13.5 7.5v15L24 38.5 10.5 31v-15L24 8.5z"/><path d="M24 18a6 6 0 100 12 6 6 0 000-12zm0 3a3 3 0 110 6 3 3 0 010-6z"/></svg>
+                </div>
+                <h1>資産管理システム</h1>
+                <p className="subtitle">Asset Management System</p>
+                {error && <div className="alert alert-error">{error}</div>}
+                <div className="form-group">
+                    <label>ユーザーID</label>
+                    <input className="form-input" value={username} onChange={e => setUsername(e.target.value)} placeholder="admin" autoFocus />
+                </div>
+                <div className="form-group">
+                    <label>パスワード</label>
+                    <input className="form-input" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••" />
+                </div>
+                <button className="btn btn-primary btn-lg" type="submit" disabled={loading}>
+                    {loading ? <span className="spinner" /> : "ログイン"}
+                </button>
+            </form>
+        </div>
+    );
+}
+
+// ===========================================================================
+// Settings Modal (API URL + Department Management)
+// ===========================================================================
+function SettingsModal({ onClose }) {
+    const [url, setUrl] = useState(localStorage.getItem("api_base") || "http://localhost:5000");
+    const [depts, setDepts] = useState([]);
+    const [newDept, setNewDept] = useState("");
+    const [loading, setLoading] = useState(true);
+    const toast = useToast();
+
+    useEffect(() => { loadDepts(); }, []);
+
+    async function loadDepts() {
+        setLoading(true);
+        try {
+            const res = await apiFetch("/departments");
+            setDepts(await res.json());
+        } catch {}
+        setLoading(false);
+    }
+
+    function saveUrl() {
+        localStorage.setItem("api_base", url.replace(/\/+$/, ""));
+        toast("API URLを保存しました。ページをリロードしてください。");
+    }
+
+    async function addDept() {
+        if (!newDept.trim()) return;
+        const res = await apiFetch("/departments", {
+            method: "POST", body: JSON.stringify({ name: newDept.trim() }),
+        });
+        if (res.ok) {
+            setNewDept("");
+            toast("部室を追加しました");
+            loadDepts();
+        } else {
+            const d = await res.json();
+            toast(d.error || "エラー", "error");
+        }
+    }
+
+    async function deleteDept(id, name) {
+        if (!confirm(`「${name}」を削除しますか？`)) return;
+        const res = await apiFetch(`/departments/${id}`, { method: "DELETE" });
+        if (res.ok) {
+            toast("削除しました");
+            loadDepts();
+        }
+    }
+
+    return (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+            <div className="modal-content">
+                <div className="modal-header">
+                    <h2>設定</h2>
+                    <button className="modal-close" onClick={onClose}><Icons.X /></button>
+                </div>
+                <div className="modal-body">
+                    <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>API接続先URL</h3>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 28 }}>
+                        <input className="form-input" value={url} onChange={e => setUrl(e.target.value)} />
+                        <button className="btn btn-primary btn-sm" onClick={saveUrl}>保存</button>
+                    </div>
+
+                    <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>設置部室マスタ</h3>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                        <input className="form-input" value={newDept} onChange={e => setNewDept(e.target.value)}
+                               placeholder="新しい部室名" onKeyDown={e => e.key === "Enter" && addDept()} />
+                        <button className="btn btn-primary btn-sm" onClick={addDept}>追加</button>
+                    </div>
+                    {loading ? <div className="spinner" /> : (
+                        <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                            {depts.map(d => (
+                                <div key={d.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+                                    <span style={{ fontSize: 14 }}>{d.name} {d.is_default && <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>(初期値)</span>}</span>
+                                    <button className="btn btn-ghost btn-sm" style={{ color: "var(--danger)", padding: 4 }}
+                                            onClick={() => deleteDept(d.id, d.name)}>
+                                        <Icons.Trash />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <div className="modal-footer">
+                    <button className="btn btn-secondary" onClick={onClose}>閉じる</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ===========================================================================
+// Asset Form Modal
+// ===========================================================================
+function AssetFormModal({ asset, onClose, onSaved }) {
+    const isEdit = !!asset;
+    const toast = useToast();
+    const [depts, setDepts] = useState([]);
+    const [form, setForm] = useState({
+        management_code: "", name: "", category: "medical", category_other: "",
+        location: LOCATIONS[0], location_other: "",
+        department: "", department_other: "",
+        purchase_from: "", purchase_price: "", purchase_date: "",
+        has_maintenance: false, maintenance_info: "", maintenance_link: "",
+        depreciation_period_months: "", lease_period_months: "",
+        manager: "", notes: "",
+        ...(asset || {}),
+    });
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        apiFetch("/departments").then(r => r.json()).then(setDepts).catch(() => {});
+    }, []);
+
+    function set(field) { return e => setForm(f => ({ ...f, [field]: e.target.type === "checkbox" ? e.target.checked : e.target.value })); }
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        setLoading(true);
+        setError("");
+        const body = { ...form };
+        // Coerce numeric fields
+        if (body.purchase_price !== "" && body.purchase_price !== null) body.purchase_price = Number(body.purchase_price);
+        else body.purchase_price = null;
+        if (body.depreciation_period_months !== "" && body.depreciation_period_months !== null) body.depreciation_period_months = Number(body.depreciation_period_months);
+        else body.depreciation_period_months = null;
+        if (body.lease_period_months !== "" && body.lease_period_months !== null) body.lease_period_months = Number(body.lease_period_months);
+        else body.lease_period_months = null;
+
+        try {
+            const res = await apiFetch(
+                isEdit ? `/assets/${asset.id}` : "/assets",
+                { method: isEdit ? "PUT" : "POST", body: JSON.stringify(body) },
+            );
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "保存に失敗しました");
+            toast(isEdit ? "更新しました" : "登録しました");
+            onSaved(data);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    return (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+            <div className="modal-content">
+                <div className="modal-header">
+                    <h2>{isEdit ? "資産編集" : "新規資産登録"}</h2>
+                    <button className="modal-close" onClick={onClose}><Icons.X /></button>
+                </div>
+                <form onSubmit={handleSubmit}>
+                    <div className="modal-body">
+                        {error && <div className="alert alert-error">{error}</div>}
+
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>管理番号<span className="required">*必須</span></label>
+                                <input className="form-input" value={form.management_code} onChange={set("management_code")} required placeholder="例: MED-001" />
+                            </div>
+                            <div className="form-group">
+                                <label>資産名<span className="required">*必須</span></label>
+                                <input className="form-input" value={form.name} onChange={set("name")} required placeholder="例: 超音波診断装置" />
+                            </div>
+                        </div>
+
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>種別<span className="required">*必須</span></label>
+                                <select className="form-input" value={form.category} onChange={set("category")}>
+                                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                                </select>
+                            </div>
+                            {form.category === "other" && (
+                                <div className="form-group">
+                                    <label>種別（その他）<span className="required">*必須</span></label>
+                                    <input className="form-input" value={form.category_other} onChange={set("category_other")} required placeholder="種別を入力" />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>設置場所<span className="required">*必須</span></label>
+                                <select className="form-input" value={form.location} onChange={set("location")}>
+                                    {LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
+                                </select>
+                            </div>
+                            {form.location === "その他" && (
+                                <div className="form-group">
+                                    <label>設置場所（その他）<span className="required">*必須</span></label>
+                                    <input className="form-input" value={form.location_other} onChange={set("location_other")} required placeholder="場所を入力" />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>設置部室<span className="required">*必須</span></label>
+                                <select className="form-input" value={form.department} onChange={set("department")}>
+                                    <option value="">選択してください</option>
+                                    {depts.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                                </select>
+                            </div>
+                            {form.department === "その他" && (
+                                <div className="form-group">
+                                    <label>設置部室（その他）<span className="required">*必須</span></label>
+                                    <input className="form-input" value={form.department_other} onChange={set("department_other")} required placeholder="部室を入力" />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>購入元</label>
+                                <input className="form-input" value={form.purchase_from} onChange={set("purchase_from")} placeholder="例: 株式会社メディカル" />
+                            </div>
+                            <div className="form-group">
+                                <label>購入金額（円）</label>
+                                <input className="form-input" type="number" value={form.purchase_price} onChange={set("purchase_price")} placeholder="例: 500000" />
+                            </div>
+                        </div>
+
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>購入日</label>
+                                <input className="form-input" type="date" value={form.purchase_date} onChange={set("purchase_date")} />
+                            </div>
+                            <div className="form-group">
+                                <label>管理者</label>
+                                <input className="form-input" value={form.manager} onChange={set("manager")} placeholder="例: 田中太郎" />
+                            </div>
+                        </div>
+
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>減価償却期間（月）</label>
+                                <input className="form-input" type="number" value={form.depreciation_period_months} onChange={set("depreciation_period_months")} placeholder="例: 60" />
+                            </div>
+                            <div className="form-group">
+                                <label>リース期間（月）</label>
+                                <input className="form-input" type="number" value={form.lease_period_months} onChange={set("lease_period_months")} placeholder="例: 36" />
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <input type="checkbox" checked={form.has_maintenance} onChange={set("has_maintenance")} />
+                                保守契約あり
+                            </label>
+                        </div>
+
+                        {form.has_maintenance && (
+                            <>
+                                <div className="form-group">
+                                    <label>保守情報</label>
+                                    <textarea className="form-input" value={form.maintenance_info} onChange={set("maintenance_info")} placeholder="保守契約の詳細情報" />
+                                </div>
+                                <div className="form-group">
+                                    <label>保守参照リンク</label>
+                                    <input className="form-input" value={form.maintenance_link} onChange={set("maintenance_link")} placeholder="https://..." />
+                                </div>
+                            </>
+                        )}
+
+                        <div className="form-group">
+                            <label>備考</label>
+                            <textarea className="form-input" value={form.notes} onChange={set("notes")} placeholder="その他メモ" />
+                        </div>
+                    </div>
+                    <div className="modal-footer">
+                        <button type="button" className="btn btn-secondary" onClick={onClose}>キャンセル</button>
+                        <button type="submit" className="btn btn-primary" disabled={loading}>
+                            {loading ? <span className="spinner" /> : (isEdit ? "更新" : "登録")}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ===========================================================================
+// Confirm Dialog
+// ===========================================================================
+function ConfirmDialog({ message, onConfirm, onCancel }) {
+    return (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onCancel()}>
+            <div className="modal-content" style={{ width: 400 }}>
+                <div className="modal-body">
+                    <p style={{ fontSize: 15, marginBottom: 20 }}>{message}</p>
+                    <div className="confirm-actions">
+                        <button className="btn btn-secondary" onClick={onCancel}>キャンセル</button>
+                        <button className="btn btn-danger" onClick={onConfirm}>削除</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ===========================================================================
+// Dashboard Page
+// ===========================================================================
+function DashboardPage() {
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        apiFetch("/stats").then(r => r.json()).then(setStats).catch(() => {}).finally(() => setLoading(false));
+    }, []);
+
+    if (loading) return <div style={{ textAlign: "center", padding: 60 }}><span className="spinner" /></div>;
+    if (!stats) return <div className="alert alert-error">統計データの取得に失敗しました</div>;
+
+    return (
+        <div>
+            <div className="page-header">
+                <h1>ダッシュボード</h1>
+            </div>
+            <div className="stats-grid">
+                <div className="stat-card">
+                    <div className="stat-icon blue"><Icons.Box /></div>
+                    <div className="stat-info"><h3>{stats.total}</h3><p>総資産数</p></div>
+                </div>
+                {Object.entries(stats.by_category).map(([cat, count]) => (
+                    <div className="stat-card" key={cat}>
+                        <div className={`stat-icon ${cat === "医療機器" ? "green" : cat === "電子機器" ? "orange" : "blue"}`}>
+                            {cat === "医療機器" ? <Icons.Shield /> : <Icons.Gear />}
+                        </div>
+                        <div className="stat-info"><h3>{count}</h3><p>{cat}</p></div>
+                    </div>
+                ))}
+                <div className="stat-card">
+                    <div className="stat-icon red"><Icons.Wrench /></div>
+                    <div className="stat-info"><h3>{stats.maintenance_count}</h3><p>保守契約あり</p></div>
+                </div>
+            </div>
+
+            <div className="card">
+                <div className="card-body">
+                    <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>設置場所別</h3>
+                    {Object.entries(stats.by_location).length === 0
+                        ? <p style={{ color: "var(--text-secondary)", fontSize: 14 }}>データなし</p>
+                        : Object.entries(stats.by_location).map(([loc, count]) => (
+                            <div key={loc} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                                <span style={{ fontSize: 13, width: 140, flexShrink: 0 }}>{loc}</span>
+                                <div style={{ flex: 1, height: 24, background: "#F0F2F5", borderRadius: 6, overflow: "hidden" }}>
+                                    <div style={{ width: `${Math.min(100, (count / stats.total) * 100)}%`, height: "100%", background: "var(--accent)", borderRadius: 6, transition: "width 0.5s ease" }} />
+                                </div>
+                                <span style={{ fontSize: 13, fontWeight: 600, width: 30, textAlign: "right" }}>{count}</span>
+                            </div>
+                        ))
+                    }
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ===========================================================================
+// Assets List Page
+// ===========================================================================
+function AssetsPage() {
+    const toast = useToast();
+    const [assets, setAssets] = useState([]);
+    const [total, setTotal] = useState(0);
+    const [page, setPage] = useState(1);
+    const [pages, setPages] = useState(1);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState("");
+    const [filterCategory, setFilterCategory] = useState("");
+    const [filterLocation, setFilterLocation] = useState("");
+    const [showForm, setShowForm] = useState(false);
+    const [editAsset, setEditAsset] = useState(null);
+    const [confirmDelete, setConfirmDelete] = useState(null);
+    const searchTimeout = useRef(null);
+
+    const loadAssets = useCallback(async (p) => {
+        setLoading(true);
+        const params = new URLSearchParams({ page: p || page, per_page: 50 });
+        if (search) params.set("search", search);
+        if (filterCategory) params.set("category", filterCategory);
+        if (filterLocation) params.set("location", filterLocation);
+        try {
+            const res = await apiFetch(`/assets?${params}`);
+            const data = await res.json();
+            setAssets(data.items);
+            setTotal(data.total);
+            setPages(data.pages);
+            setPage(data.page);
+        } catch {}
+        setLoading(false);
+    }, [page, search, filterCategory, filterLocation]);
+
+    useEffect(() => { loadAssets(1); }, [filterCategory, filterLocation]);
+
+    function onSearchChange(e) {
+        const v = e.target.value;
+        setSearch(v);
+        clearTimeout(searchTimeout.current);
+        searchTimeout.current = setTimeout(() => loadAssets(1), 400);
+    }
+
+    async function handleDelete() {
+        if (!confirmDelete) return;
+        const res = await apiFetch(`/assets/${confirmDelete.id}`, { method: "DELETE" });
+        if (res.ok) {
+            toast("削除しました");
+            setConfirmDelete(null);
+            loadAssets(page);
+        }
+    }
+
+    async function handleDownload(fmt) {
+        try {
+            const token = sessionStorage.getItem("token");
+            const res = await fetch(apiUrl(`/assets/download?format=${fmt}`), {
+                headers: { "Authorization": `Bearer ${token}` },
+            });
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `assets.${fmt}`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast(`${fmt.toUpperCase()} ダウンロード完了`);
+        } catch {
+            toast("ダウンロードに失敗しました", "error");
+        }
+    }
+
+    function categoryBadge(cat) {
+        const cls = cat === "medical" ? "badge-medical" : cat === "electronic" ? "badge-electronic" : "badge-other";
+        return <span className={`badge ${cls}`}>{CATEGORY_MAP[cat] || cat}</span>;
+    }
+
+    return (
+        <div>
+            <div className="page-header">
+                <h1>資産一覧</h1>
+                <div className="page-header-actions">
+                    <button className="btn btn-secondary btn-sm" onClick={() => handleDownload("xlsx")}><Icons.Download /> Excel</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => handleDownload("csv")}><Icons.Download /> CSV</button>
+                    <button className="btn btn-primary btn-sm" onClick={() => { setEditAsset(null); setShowForm(true); }}><Icons.Plus /> 新規登録</button>
+                </div>
+            </div>
+
+            <div className="card" style={{ marginBottom: 24 }}>
+                <div className="card-body" style={{ padding: 16 }}>
+                    <div className="filter-bar">
+                        <div className="search-box">
+                            <Icons.Search />
+                            <input className="form-input" placeholder="名前・管理番号・管理者で検索…" value={search} onChange={onSearchChange} />
+                        </div>
+                        <select className="form-input filter-select" value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
+                            <option value="">全種別</option>
+                            {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                        </select>
+                        <select className="form-input filter-select" value={filterLocation} onChange={e => setFilterLocation(e.target.value)}>
+                            <option value="">全設置場所</option>
+                            {LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div className="card">
+                {loading ? (
+                    <div style={{ textAlign: "center", padding: 60 }}><span className="spinner" /></div>
+                ) : assets.length === 0 ? (
+                    <div className="empty-state">
+                        <Icons.Box />
+                        <h3>資産が登録されていません</h3>
+                        <p>「新規登録」ボタンから最初の資産を登録してください</p>
+                        <button className="btn btn-primary btn-sm" onClick={() => { setEditAsset(null); setShowForm(true); }}><Icons.Plus /> 新規登録</button>
+                    </div>
+                ) : (
+                    <>
+                        <div className="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>管理番号</th>
+                                        <th>資産名</th>
+                                        <th>種別</th>
+                                        <th>設置場所</th>
+                                        <th>設置部室</th>
+                                        <th>購入金額</th>
+                                        <th>保守</th>
+                                        <th>管理者</th>
+                                        <th style={{ width: 90 }}>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {assets.map(a => (
+                                        <tr key={a.id}>
+                                            <td><strong style={{ color: "var(--accent)" }}>{a.management_code}</strong></td>
+                                            <td>{a.name}</td>
+                                            <td>{categoryBadge(a.category)}</td>
+                                            <td>{a.location === "その他" && a.location_other ? `その他(${a.location_other})` : a.location}</td>
+                                            <td>{a.department === "その他" && a.department_other ? `その他(${a.department_other})` : a.department}</td>
+                                            <td style={{ textAlign: "right" }}>{a.purchase_price != null ? `¥${Number(a.purchase_price).toLocaleString()}` : "—"}</td>
+                                            <td>{a.has_maintenance ? <span className="badge badge-yes">有</span> : <span className="badge badge-no">無</span>}</td>
+                                            <td>{a.manager || "—"}</td>
+                                            <td>
+                                                <div style={{ display: "flex", gap: 4 }}>
+                                                    <button className="btn btn-ghost btn-sm" style={{ padding: 6 }} onClick={() => { setEditAsset(a); setShowForm(true); }} title="編集"><Icons.Edit /></button>
+                                                    <button className="btn btn-ghost btn-sm" style={{ padding: 6, color: "var(--danger)" }} onClick={() => setConfirmDelete(a)} title="削除"><Icons.Trash /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="pagination" style={{ padding: "12px 16px" }}>
+                            <span>{total} 件中 {(page - 1) * 50 + 1}〜{Math.min(page * 50, total)} 件</span>
+                            <div className="pagination-btns">
+                                <button disabled={page <= 1} onClick={() => loadAssets(page - 1)}>‹</button>
+                                {Array.from({ length: Math.min(pages, 5) }, (_, i) => {
+                                    const p = i + 1;
+                                    return <button key={p} className={p === page ? "active" : ""} onClick={() => loadAssets(p)}>{p}</button>;
+                                })}
+                                <button disabled={page >= pages} onClick={() => loadAssets(page + 1)}>›</button>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {showForm && <AssetFormModal asset={editAsset} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); loadAssets(page); }} />}
+            {confirmDelete && <ConfirmDialog message={`「${confirmDelete.name}」(${confirmDelete.management_code}) を削除しますか？`} onConfirm={handleDelete} onCancel={() => setConfirmDelete(null)} />}
+        </div>
+    );
+}
+
+// ===========================================================================
+// Main App
+// ===========================================================================
+function App() {
+    const [user, setUser] = useState(null);
+    const [currentPage, setCurrentPage] = useState("dashboard");
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+    const [checkingAuth, setCheckingAuth] = useState(true);
+
+    useEffect(() => {
+        const token = sessionStorage.getItem("token");
+        if (token) {
+            apiFetch("/auth/me").then(r => {
+                if (r.ok) return r.json();
+                throw new Error();
+            }).then(setUser).catch(() => sessionStorage.removeItem("token")).finally(() => setCheckingAuth(false));
+        } else {
+            setCheckingAuth(false);
+        }
+    }, []);
+
+    function logout() {
+        sessionStorage.removeItem("token");
+        setUser(null);
+    }
+
+    if (checkingAuth) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}><span className="spinner" /></div>;
+    if (!user) return <LoginScreen onLogin={setUser} />;
+
+    const navItems = [
+        { key: "dashboard", label: "ダッシュボード", icon: Icons.Dashboard },
+        { key: "assets", label: "資産一覧", icon: Icons.List },
+    ];
+
+    return (
+        <div className="app-layout">
+            <button className="mobile-menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                <Icons.Menu />
+            </button>
+            <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
+                <div className="sidebar-brand">
+                    <h2>資産管理</h2>
+                    <span>Asset Management</span>
+                </div>
+                <nav className="sidebar-nav">
+                    {navItems.map(item => (
+                        <button key={item.key} className={`sidebar-nav-item ${currentPage === item.key ? "active" : ""}`}
+                                onClick={() => { setCurrentPage(item.key); setSidebarOpen(false); }}>
+                            <item.icon />
+                            {item.label}
+                        </button>
+                    ))}
+                    <button className="sidebar-nav-item" onClick={() => setShowSettings(true)}>
+                        <Icons.Settings />
+                        設定
+                    </button>
+                </nav>
+                <div className="sidebar-footer">
+                    <div style={{ fontSize: 13, marginBottom: 8 }}>
+                        <span style={{ color: "#fff" }}>{user.display_name || user.username}</span>
+                    </div>
+                    <button onClick={logout}><Icons.Logout /> ログアウト</button>
+                </div>
+            </aside>
+
+            <main className="main-content">
+                {currentPage === "dashboard" && <DashboardPage />}
+                {currentPage === "assets" && <AssetsPage />}
+            </main>
+
+            {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+        </div>
+    );
+}
+
+// ===========================================================================
+// Mount
+// ===========================================================================
+ReactDOM.createRoot(document.getElementById("root")).render(
+    <ToastProvider><App /></ToastProvider>
+);
+</script>
+</body>
+</html>
