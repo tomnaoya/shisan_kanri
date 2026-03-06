@@ -206,7 +206,7 @@ DEFAULT_DEPARTMENTS = [
 
 DEFAULT_LOCATIONS = [
     "豊洲院", "勝どき院", "田町芝浦院", "ガーデン院小児耳鼻",
-    "ガーデン院皮膚", "柏院", "有明院", "有明ひふか院", "サポートチーム",
+    "ガーデン院皮膚", "柏院", "サポートチーム",
 ]
 
 
@@ -229,12 +229,12 @@ def seed_data():
 
 def migrate_data():
     """Migrate existing data to new schema."""
-    # Add role/location columns to existing admin users
+    # 1. Add role to existing users
     for user in User.query.all():
         if not user.role:
             user.role = "admin"
 
-    # Migrate has_maintenance -> maintenance_status
+    # 2. Migrate has_maintenance -> maintenance_status
     for asset in Asset.query.all():
         if asset.maintenance_status is None or asset.maintenance_status == "":
             if asset.has_maintenance is True:
@@ -245,6 +245,51 @@ def migrate_data():
                 asset.maintenance_status = "不明"
         if asset.is_deleted is None:
             asset.is_deleted = False
+
+    db.session.flush()
+
+    # 3. Location merge: 有明院 -> ガーデン院小児耳鼻, 有明ひふか院 -> ガーデン院皮膚
+    LOCATION_MERGE = {
+        "有明院": "ガーデン院小児耳鼻",
+        "有明ひふか院": "ガーデン院皮膚",
+    }
+    for old_loc, new_loc in LOCATION_MERGE.items():
+        Asset.query.filter_by(location=old_loc).update({"location": new_loc})
+    # Remove merged locations from Location table
+    for old_loc in LOCATION_MERGE:
+        Location.query.filter_by(name=old_loc).delete()
+
+    db.session.flush()
+
+    # 4. Re-number all assets if any still have old-format codes (not XX-NNNNN)
+    import re
+    new_format = re.compile(r'^[A-Z]\d-\d{5}$')
+    needs_renumber = Asset.query.filter(
+        ~Asset.management_code.op('REGEXP')(r'^[A-Z]\d-\d{5}$')
+    ).first()
+
+    # SQLite doesn't support REGEXP by default, so check differently
+    sample = Asset.query.first()
+    if sample and not new_format.match(sample.management_code or ""):
+        # Re-number ALL assets grouped by category
+        for cat_key in CATEGORY_PREFIX:
+            prefix = CATEGORY_PREFIX[cat_key]
+            assets = (
+                Asset.query
+                .filter_by(category=cat_key)
+                .order_by(Asset.id)
+                .all()
+            )
+            for idx, asset in enumerate(assets, start=1):
+                old_code = asset.management_code
+                new_code = f"{prefix}-{idx:05d}"
+                # Save old code in notes
+                if old_code and old_code != new_code:
+                    old_note = asset.notes or ""
+                    if old_code not in old_note:
+                        prefix_note = f"旧管理番号: {old_code}"
+                        asset.notes = f"{prefix_note} / {old_note}" if old_note else prefix_note
+                asset.management_code = new_code
 
     db.session.commit()
 
@@ -932,24 +977,25 @@ with app.app_context():
     db.create_all()
 
     # Migrate existing tables: add missing columns
-    import sqlite3
-    conn = sqlite3.connect(f"{DATA_DIR}/assets.db")
-    cursor = conn.cursor()
+    import sqlite3 as _sqlite3
+    _conn = _sqlite3.connect(f"{DATA_DIR}/assets.db")
+    _cur = _conn.cursor()
 
-    def add_column_if_not_exists(table, column, col_type, default=None):
+    def _add_col(table, column, col_type, default=None):
         try:
-            cursor.execute(f"SELECT {column} FROM {table} LIMIT 1")
-        except sqlite3.OperationalError:
-            default_clause = f" DEFAULT '{default}'" if default is not None else ""
-            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}{default_clause}")
+            _cur.execute(f"SELECT {column} FROM {table} LIMIT 1")
+        except _sqlite3.OperationalError:
+            dc = f" DEFAULT '{default}'" if default is not None else ""
+            _cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}{dc}")
 
-    add_column_if_not_exists("users", "role", "VARCHAR(20)", "admin")
-    add_column_if_not_exists("users", "location", "VARCHAR(100)")
-    add_column_if_not_exists("assets", "maintenance_status", "VARCHAR(10)", "無")
-    add_column_if_not_exists("assets", "is_deleted", "BOOLEAN", "0")
-    add_column_if_not_exists("assets", "deleted_at", "DATETIME")
-    conn.commit()
-    conn.close()
+    _add_col("users", "role", "VARCHAR(20)", "admin")
+    _add_col("users", "location", "VARCHAR(100)")
+    _add_col("assets", "maintenance_status", "VARCHAR(10)", "無")
+    _add_col("assets", "is_deleted", "BOOLEAN", "0")
+    _add_col("assets", "deleted_at", "DATETIME")
+    _add_col("assets", "has_maintenance", "BOOLEAN")
+    _conn.commit()
+    _conn.close()
 
     seed_data()
     migrate_data()
