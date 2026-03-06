@@ -1,161 +1,151 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>資産管理システム</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
-    <style>
-        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        :root{--bg-primary:#F5F6F8;--bg-card:#FFF;--bg-sidebar:#1A2332;--bg-sidebar-hover:#243044;--bg-sidebar-active:#2B5797;--text-primary:#1A2332;--text-secondary:#5A6577;--text-sidebar:#A8B4C6;--text-sidebar-active:#FFF;--accent:#2B5797;--accent-light:#EBF0F7;--accent-hover:#1E3F6F;--danger:#C0392B;--danger-light:#FDEDEC;--success:#27AE60;--success-light:#E8F8F0;--warning:#F39C12;--warning-light:#FEF9E7;--border:#E2E6EC;--shadow-sm:0 1px 3px rgba(0,0,0,.06);--shadow-md:0 4px 12px rgba(0,0,0,.08);--shadow-lg:0 8px 24px rgba(0,0,0,.12);--radius:8px;--radius-lg:12px;--transition:.2s ease}
-        body{font-family:'Noto Sans JP','IBM Plex Sans',sans-serif;background:var(--bg-primary);color:var(--text-primary);line-height:1.6;-webkit-font-smoothing:antialiased}
-        .login-wrapper{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1A2332 0%,#2B5797 50%,#1A2332 100%);position:relative;overflow:hidden}
-        .login-wrapper::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 30% 50%,rgba(43,87,151,.3) 0%,transparent 60%),radial-gradient(ellipse at 70% 50%,rgba(26,35,50,.4) 0%,transparent 60%);animation:loginBg 20s ease infinite alternate}
-        @keyframes loginBg{from{transform:rotate(0)}to{transform:rotate(10deg)}}
-        .login-card{position:relative;z-index:1;background:var(--bg-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:48px 40px;width:400px;max-width:90vw;animation:fadeUp .5s ease}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-        .login-card h1{font-size:20px;font-weight:700;color:var(--accent);text-align:center;margin-bottom:8px}
-        .login-card .subtitle{text-align:center;color:var(--text-secondary);font-size:13px;margin-bottom:32px}
-        .login-card .logo-icon{display:flex;justify-content:center;margin-bottom:20px}
-        .login-card .logo-icon svg{width:48px;height:48px;fill:var(--accent)}
-        .form-group{margin-bottom:20px}.form-group label{display:block;font-size:13px;font-weight:500;color:var(--text-secondary);margin-bottom:6px}
-        .form-group label .required{color:var(--danger);margin-left:4px;font-size:11px}
-        .form-input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:inherit;transition:border-color var(--transition),box-shadow var(--transition);background:#FAFBFC}
-        .form-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(43,87,151,.12);background:#fff}
-        .form-input::placeholder{color:#B0B8C4}
-        select.form-input{cursor:pointer;appearance:auto}textarea.form-input{resize:vertical;min-height:80px}
-        .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-        @media(max-width:768px){.form-row{grid-template-columns:1fr}}
-        .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border:none;border-radius:6px;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;transition:all var(--transition);text-decoration:none}
-        .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-hover);transform:translateY(-1px);box-shadow:var(--shadow-sm)}
-        .btn-secondary{background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border)}.btn-secondary:hover{background:var(--border)}
-        .btn-danger{background:var(--danger);color:#fff}.btn-danger:hover{background:#A93226}
-        .btn-ghost{background:transparent;color:var(--accent)}.btn-ghost:hover{background:var(--accent-light)}
-        .btn-sm{padding:6px 14px;font-size:13px}.btn-lg{padding:12px 28px;font-size:15px;width:100%}
-        .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-        .app-layout{display:flex;min-height:100vh}
-        .sidebar{width:240px;background:var(--bg-sidebar);color:var(--text-sidebar);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .3s ease}
-        .sidebar-brand{padding:24px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
-        .sidebar-brand h2{font-size:16px;font-weight:600;color:#fff}.sidebar-brand span{font-size:11px;color:var(--text-sidebar);display:block;margin-top:2px}
-        .sidebar-nav{flex:1;padding:12px 8px}
-        .sidebar-nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:6px;cursor:pointer;font-size:14px;transition:all var(--transition);margin-bottom:2px;border:none;background:none;color:var(--text-sidebar);width:100%;text-align:left;font-family:inherit}
-        .sidebar-nav-item:hover{background:var(--bg-sidebar-hover);color:#fff}
-        .sidebar-nav-item.active{background:var(--bg-sidebar-active);color:var(--text-sidebar-active)}
-        .sidebar-nav-item svg{width:18px;height:18px;flex-shrink:0}
-        .sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08)}
-        .sidebar-footer button{background:none;border:none;color:var(--text-sidebar);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:inherit;padding:6px 0}
-        .sidebar-footer button:hover{color:#fff}
-        .main-content{flex:1;margin-left:240px;padding:28px 32px;min-height:100vh}
-        .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
-        .page-header h1{font-size:22px;font-weight:600}
-        .page-header-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-        .card{background:var(--bg-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--border)}.card-body{padding:24px}
-        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
-        .stat-card{background:var(--bg-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--border);padding:20px;display:flex;align-items:flex-start;gap:16px;transition:transform var(--transition)}
-        .stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
-        .stat-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-        .stat-icon svg{width:22px;height:22px}
-        .stat-icon.blue{background:var(--accent-light)}.stat-icon.blue svg{stroke:var(--accent)}
-        .stat-icon.green{background:var(--success-light)}.stat-icon.green svg{stroke:var(--success)}
-        .stat-icon.orange{background:var(--warning-light)}.stat-icon.orange svg{stroke:var(--warning)}
-        .stat-icon.red{background:var(--danger-light)}.stat-icon.red svg{stroke:var(--danger)}
-        .stat-info h3{font-size:24px;font-weight:700;line-height:1.2}.stat-info p{font-size:13px;color:var(--text-secondary)}
-        .table-wrapper{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}
-        thead th{background:#F8F9FB;padding:10px 14px;text-align:left;font-weight:600;color:var(--text-secondary);font-size:12px;text-transform:uppercase;letter-spacing:.03em;border-bottom:2px solid var(--border);white-space:nowrap}
-        tbody td{padding:12px 14px;border-bottom:1px solid #F0F2F5;vertical-align:middle}
-        tbody tr{transition:background var(--transition)}tbody tr:hover{background:#F8F9FB}
-        .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500}
-        .badge-medical{background:#EBF0F7;color:var(--accent)}.badge-electronic{background:var(--success-light);color:var(--success)}.badge-other{background:#F0F0F0;color:#666}
-        .badge-yes{background:var(--success-light);color:var(--success)}.badge-no{background:#F0F0F0;color:#999}
-        .filter-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-        .filter-bar .search-box{flex:1;min-width:200px;position:relative}
-        .filter-bar .search-box input{padding-left:38px}
-        .filter-bar .search-box svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:#B0B8C4}
-        .filter-select{min-width:140px}
-        .pagination{display:flex;align-items:center;justify-content:space-between;padding:16px 0;font-size:13px;color:var(--text-secondary)}
-        .pagination-btns{display:flex;gap:4px}
-        .pagination-btns button{width:34px;height:34px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all var(--transition);font-family:inherit}
-        .pagination-btns button:hover{border-color:var(--accent);color:var(--accent)}
-        .pagination-btns button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-        .pagination-btns button:disabled{opacity:.3;cursor:not-allowed}
-        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200;animation:fadeIn .2s ease}
-        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-        .modal-content{background:var(--bg-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:680px;max-width:92vw;max-height:90vh;overflow-y:auto;animation:slideUp .3s ease}
-        @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
-        .modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border)}
-        .modal-header h2{font-size:17px;font-weight:600}
-        .modal-close{width:32px;height:32px;border:none;background:none;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);transition:all var(--transition)}
-        .modal-close:hover{background:var(--bg-primary);color:var(--text-primary)}
-        .modal-body{padding:24px}.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
-        .toast{position:fixed;top:20px;right:20px;padding:14px 20px;border-radius:var(--radius);font-size:14px;z-index:300;animation:slideIn .3s ease;box-shadow:var(--shadow-md)}
-        @keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
-        .toast-success{background:var(--success);color:#fff}.toast-error{background:var(--danger);color:#fff}
-        .empty-state{text-align:center;padding:60px 20px;color:var(--text-secondary)}
-        .empty-state svg{width:56px;height:56px;stroke:var(--border);margin-bottom:16px}
-        .empty-state h3{font-size:16px;font-weight:500;margin-bottom:6px;color:var(--text-primary)}.empty-state p{font-size:14px;margin-bottom:20px}
-        .alert{padding:12px 16px;border-radius:6px;font-size:13px;margin-bottom:16px}
-        .alert-error{background:var(--danger-light);color:var(--danger);border:1px solid #F5C6CB}
-        .mobile-menu-btn{display:none;position:fixed;top:16px;left:16px;z-index:110;width:40px;height:40px;border-radius:8px;background:var(--bg-sidebar);border:none;color:#fff;cursor:pointer;align-items:center;justify-content:center}
-        @media(max-width:900px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main-content{margin-left:0;padding:20px 16px;padding-top:60px}.mobile-menu-btn{display:flex}}
-        .spinner{display:inline-block;width:18px;height:18px;border:2px solid #ccc;border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        .confirm-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
-        .loading-center{display:flex;align-items:center;justify-content:center;padding:60px}
-    </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>資産管理システム</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg-primary:#F5F6F8;--bg-card:#FFF;--bg-sidebar:#1A2332;--bg-sidebar-hover:#243044;--bg-sidebar-active:#2B5797;--text-primary:#1A2332;--text-secondary:#5A6577;--text-sidebar:#A8B4C6;--text-sidebar-active:#FFF;--accent:#2B5797;--accent-light:#EBF0F7;--accent-hover:#1E3F6F;--danger:#C0392B;--danger-light:#FDEDEC;--success:#27AE60;--success-light:#E8F8F0;--warning:#F39C12;--warning-light:#FEF9E7;--border:#E2E6EC;--shadow-sm:0 1px 3px rgba(0,0,0,.06);--shadow-md:0 4px 12px rgba(0,0,0,.08);--shadow-lg:0 8px 24px rgba(0,0,0,.12);--radius:8px;--radius-lg:12px;--transition:.2s ease}
+body{font-family:'Noto Sans JP','IBM Plex Sans',sans-serif;background:var(--bg-primary);color:var(--text-primary);line-height:1.6;-webkit-font-smoothing:antialiased}
+.login-wrapper{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1A2332 0%,#2B5797 50%,#1A2332 100%);position:relative;overflow:hidden}
+.login-card{position:relative;z-index:1;background:var(--bg-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:48px 40px;width:400px;max-width:90vw;animation:fadeUp .5s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.login-card h1{font-size:20px;font-weight:700;color:var(--accent);text-align:center;margin-bottom:8px}
+.login-card .subtitle{text-align:center;color:var(--text-secondary);font-size:13px;margin-bottom:32px}
+.login-card .logo-icon{display:flex;justify-content:center;margin-bottom:20px}
+.login-card .logo-icon svg{width:48px;height:48px;fill:var(--accent)}
+.form-group{margin-bottom:20px}.form-group label{display:block;font-size:13px;font-weight:500;color:var(--text-secondary);margin-bottom:6px}
+.form-group label .req{color:var(--danger);margin-left:4px;font-size:11px}
+.form-input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:inherit;transition:border-color var(--transition),box-shadow var(--transition);background:#FAFBFC}
+.form-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(43,87,151,.12);background:#fff}
+.form-input::placeholder{color:#B0B8C4}
+.form-input:disabled{background:#ECEEF2;color:#888;cursor:not-allowed}
+select.form-input{cursor:pointer;appearance:auto}textarea.form-input{resize:vertical;min-height:80px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:768px){.form-row{grid-template-columns:1fr}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border:none;border-radius:6px;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;transition:all var(--transition)}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-hover)}
+.btn-secondary{background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border)}.btn-secondary:hover{background:var(--border)}
+.btn-danger{background:var(--danger);color:#fff}.btn-danger:hover{background:#A93226}
+.btn-ghost{background:transparent;color:var(--accent)}.btn-ghost:hover{background:var(--accent-light)}
+.btn-sm{padding:6px 14px;font-size:13px}.btn-lg{padding:12px 28px;font-size:15px;width:100%}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.app-layout{display:flex;min-height:100vh}
+.sidebar{width:240px;background:var(--bg-sidebar);color:var(--text-sidebar);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
+.sidebar-brand{padding:24px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sidebar-brand h2{font-size:16px;font-weight:600;color:#fff}.sidebar-brand span{font-size:11px;color:var(--text-sidebar);display:block;margin-top:2px}
+.sidebar-nav{flex:1;padding:12px 8px}
+.sidebar-nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:6px;cursor:pointer;font-size:14px;transition:all var(--transition);margin-bottom:2px;border:none;background:none;color:var(--text-sidebar);width:100%;text-align:left;font-family:inherit}
+.sidebar-nav-item:hover{background:var(--bg-sidebar-hover);color:#fff}
+.sidebar-nav-item.active{background:var(--bg-sidebar-active);color:var(--text-sidebar-active)}
+.sidebar-nav-item svg{width:18px;height:18px;flex-shrink:0}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08)}
+.sidebar-footer button{background:none;border:none;color:var(--text-sidebar);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:inherit;padding:6px 0}
+.sidebar-footer button:hover{color:#fff}
+.main-content{flex:1;margin-left:240px;padding:28px 32px;min-height:100vh}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.page-header h1{font-size:22px;font-weight:600}
+.page-header-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.card{background:var(--bg-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--border)}.card-body{padding:24px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--bg-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--border);padding:20px;display:flex;align-items:flex-start;gap:16px;transition:transform var(--transition)}
+.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.stat-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stat-icon svg{width:22px;height:22px}
+.stat-icon.blue{background:var(--accent-light)}.stat-icon.blue svg{stroke:var(--accent)}
+.stat-icon.green{background:var(--success-light)}.stat-icon.green svg{stroke:var(--success)}
+.stat-icon.orange{background:var(--warning-light)}.stat-icon.orange svg{stroke:var(--warning)}
+.stat-icon.red{background:var(--danger-light)}.stat-icon.red svg{stroke:var(--danger)}
+.stat-info h3{font-size:24px;font-weight:700;line-height:1.2}.stat-info p{font-size:13px;color:var(--text-secondary)}
+.table-wrapper{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:#F8F9FB;padding:10px 14px;text-align:left;font-weight:600;color:var(--text-secondary);font-size:12px;text-transform:uppercase;letter-spacing:.03em;border-bottom:2px solid var(--border);white-space:nowrap}
+tbody td{padding:12px 14px;border-bottom:1px solid #F0F2F5;vertical-align:middle}
+tbody tr{transition:background var(--transition)}tbody tr:hover{background:#F8F9FB}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500}
+.badge-medical{background:#EBF0F7;color:var(--accent)}.badge-electronic{background:var(--success-light);color:var(--success)}.badge-other{background:#F0F0F0;color:#666}
+.badge-supply{background:var(--warning-light);color:var(--warning)}.badge-intangible{background:#E8E0F0;color:#6C3483}
+.badge-yes{background:var(--success-light);color:var(--success)}.badge-no{background:#F0F0F0;color:#999}.badge-unknown{background:var(--warning-light);color:var(--warning)}
+.filter-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.filter-bar .search-box{flex:1;min-width:180px;position:relative}
+.filter-bar .search-box input{padding-left:38px}
+.filter-bar .search-box svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:#B0B8C4}
+.filter-select{min-width:120px}
+.filter-date{width:140px}
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;font-size:13px;color:var(--text-secondary)}
+.pagination-btns{display:flex;gap:4px}
+.pagination-btns button{width:34px;height:34px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;font-family:inherit}
+.pagination-btns button:hover{border-color:var(--accent);color:var(--accent)}
+.pagination-btns button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pagination-btns button:disabled{opacity:.3;cursor:not-allowed}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-content{background:var(--bg-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:700px;max-width:92vw;max-height:90vh;overflow-y:auto;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border)}
+.modal-header h2{font-size:17px;font-weight:600}
+.modal-close{width:32px;height:32px;border:none;background:none;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary)}
+.modal-close:hover{background:var(--bg-primary);color:var(--text-primary)}
+.modal-body{padding:24px}.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+.toast{position:fixed;top:20px;right:20px;padding:14px 20px;border-radius:var(--radius);font-size:14px;z-index:300;animation:slideIn .3s ease;box-shadow:var(--shadow-md)}
+@keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast-success{background:var(--success);color:#fff}.toast-error{background:var(--danger);color:#fff}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-secondary)}
+.empty-state svg{width:56px;height:56px;stroke:var(--border);margin-bottom:16px}
+.empty-state h3{font-size:16px;font-weight:500;margin-bottom:6px;color:var(--text-primary)}.empty-state p{font-size:14px;margin-bottom:20px}
+.alert{padding:12px 16px;border-radius:6px;font-size:13px;margin-bottom:16px}
+.alert-error{background:var(--danger-light);color:var(--danger);border:1px solid #F5C6CB}
+.mobile-menu-btn{display:none;position:fixed;top:16px;left:16px;z-index:110;width:40px;height:40px;border-radius:8px;background:var(--bg-sidebar);border:none;color:#fff;cursor:pointer;align-items:center;justify-content:center}
+@media(max-width:900px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main-content{margin-left:0;padding:20px 16px;padding-top:60px}.mobile-menu-btn{display:flex}}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid #ccc;border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.confirm-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.loading-center{display:flex;align-items:center;justify-content:center;padding:60px}
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);padding-bottom:0}
+.tab-btn{padding:10px 20px;border:none;background:none;font-size:14px;font-weight:500;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-btn:hover{color:var(--accent)}
+.user-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.user-row .info{flex:1}.user-row .info strong{font-size:14px}.user-row .info span{font-size:12px;color:var(--text-secondary);margin-left:8px}
+</style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
 const{useState,useEffect,useCallback,useRef,createContext,useContext}=React;
+const API_BASE="";
+const CATEGORIES=[{value:"medical",label:"医療機器"},{value:"medical_supply",label:"医療資材"},{value:"electronic",label:"電子機器"},{value:"intangible",label:"非実在資産"},{value:"other",label:"その他"}];
+const CATEGORY_MAP={medical:"医療機器",medical_supply:"医療資材",electronic:"電子機器",intangible:"非実在資産",other:"その他"};
+const MAINT_OPTIONS=["有","無","不明"];
 
-// ============================================================
-// ★ API接続先 — RenderのバックエンドURL
-// ============================================================
-const API_BASE = "";
+let authToken=null;
+function setToken(t){authToken=t;try{sessionStorage.setItem("token",t);}catch{}}
+function getToken(){if(authToken)return authToken;try{authToken=sessionStorage.getItem("token");}catch{} return authToken;}
+function clearToken(){authToken=null;try{sessionStorage.removeItem("token");}catch{}}
 
-const LOCATIONS=["豊洲院","勝どき院","田町芝浦院","ガーデン院小児耳鼻","ガーデン院皮膚","柏院","有明院","有明ひふか院","サポートチーム","管理部","その他"];
-const CATEGORIES=[{value:"medical",label:"医療機器"},{value:"electronic",label:"電子機器"},{value:"other",label:"その他"}];
-const CATEGORY_MAP={medical:"医療機器",electronic:"電子機器",other:"その他"};
-
-// ============================================================
-// Token管理 (メモリ内)
-// ============================================================
-let authToken = null;
-function setToken(t){authToken=t; try{sessionStorage.setItem("token",t);}catch{}}
-function getToken(){if(authToken)return authToken; try{authToken=sessionStorage.getItem("token");}catch{} return authToken;}
-function clearToken(){authToken=null; try{sessionStorage.removeItem("token");}catch{}}
-
-// ============================================================
-// API通信
-// ============================================================
-async function apiFetch(path, opts={}){
+async function apiFetch(path,opts={}){
     const token=getToken();
     const headers={"Content-Type":"application/json",...(opts.headers||{})};
-    if(token) headers["Authorization"]="Bearer "+token;
+    if(token)headers["Authorization"]="Bearer "+token;
     const res=await fetch(API_BASE+"/api"+path,{...opts,headers});
     if(res.status===401){clearToken();window.location.reload();}
     return res;
 }
 
-// ============================================================
-// Toast
-// ============================================================
 const ToastCtx=createContext();
 function ToastProvider({children}){const[t,setT]=useState(null);const show=useCallback((msg,type="success")=>{setT({msg,type});setTimeout(()=>setT(null),3000);},[]);return<ToastCtx.Provider value={show}>{children}{t&&<div className={"toast toast-"+t.type}>{t.msg}</div>}</ToastCtx.Provider>;}
 function useToast(){return useContext(ToastCtx);}
 
-// ============================================================
-// Icons
-// ============================================================
 const IC={
     Dashboard:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
     List:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg>,
     Plus:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
     Download:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+    Upload:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
     Search:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
     Settings:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
     Logout:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
@@ -167,158 +157,177 @@ const IC={
     Shield:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
     Wrench:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>,
     Gear:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/></svg>,
-    Upload:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
 };
 
-// ============================================================
-// Login
-// ============================================================
+/* ===== Login ===== */
 function LoginScreen({onLogin}){
     const[u,setU]=useState("");const[p,setP]=useState("");const[err,setErr]=useState("");const[ld,setLd]=useState(false);
     const submit=async(e)=>{e.preventDefault();setLd(true);setErr("");
-        try{
-            const res=await fetch(API_BASE+"/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p})});
-            const data=await res.json();
-            if(!res.ok)throw new Error(data.error||"ログイン失敗");
-            setToken(data.access_token);
-            onLogin(data.user);
+        try{const res=await fetch(API_BASE+"/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p})});
+            const data=await res.json();if(!res.ok)throw new Error(data.error||"ログイン失敗");
+            setToken(data.access_token);onLogin(data.user);
         }catch(e){setErr(e.message);}finally{setLd(false);}
     };
     return(<div className="login-wrapper"><form className="login-card" onSubmit={submit}>
         <div className="logo-icon"><svg viewBox="0 0 48 48"><path d="M24 4L6 14v20l18 10 18-10V14L24 4zm0 4.5l13.5 7.5v15L24 38.5 10.5 31v-15L24 8.5z"/><path d="M24 18a6 6 0 100 12 6 6 0 000-12zm0 3a3 3 0 110 6 3 3 0 010-6z"/></svg></div>
         <h1>資産管理システム</h1><p className="subtitle">Asset Management System</p>
         {err&&<div className="alert alert-error">{err}</div>}
-        <div className="form-group"><label>ユーザーID</label><input className="form-input" value={u} onChange={e=>setU(e.target.value)} placeholder="admin" autoFocus/></div>
-        <div className="form-group"><label>パスワード</label><input className="form-input" type="password" value={p} onChange={e=>setP(e.target.value)} placeholder="パスワード"/></div>
+        <div className="form-group"><label>ユーザーID</label><input className="form-input" value={u} onChange={e=>setU(e.target.value)} autoFocus/></div>
+        <div className="form-group"><label>パスワード</label><input className="form-input" type="password" value={p} onChange={e=>setP(e.target.value)}/></div>
         <button className="btn btn-primary btn-lg" type="submit" disabled={ld}>{ld?<span className="spinner"/>:"ログイン"}</button>
     </form></div>);
 }
 
-// ============================================================
-// Settings
-// ============================================================
-function SettingsModal({onClose}){
-    const[depts,setDepts]=useState([]);const[nd,setNd]=useState("");const[ld,setLd]=useState(true);const toast=useToast();
-    useEffect(()=>{loadD();},[]);
-    async function loadD(){setLd(true);try{const r=await apiFetch("/departments");setDepts(await r.json());}catch{}setLd(false);}
-    async function addD(){if(!nd.trim())return;const r=await apiFetch("/departments",{method:"POST",body:JSON.stringify({name:nd.trim()})});const d=await r.json();if(r.ok){setNd("");toast("追加しました");loadD();}else toast(d.error||"エラー","error");}
-    async function delD(id,nm){if(!confirm("「"+nm+"」を削除？"))return;await apiFetch("/departments/"+id,{method:"DELETE"});toast("削除しました");loadD();}
-    return(<div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal-content">
-        <div className="modal-header"><h2>設定 — 設置部室マスタ</h2><button className="modal-close" onClick={onClose}><IC.X/></button></div>
+/* ===== Settings Modal ===== */
+function SettingsModal({onClose,user}){
+    const[tab,setTab]=useState("departments");
+    const isAdmin=user.role==="admin";
+    return(<div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal-content" style={{width:750}}>
+        <div className="modal-header"><h2>設定</h2><button className="modal-close" onClick={onClose}><IC.X/></button></div>
         <div className="modal-body">
-            <div style={{display:"flex",gap:8,marginBottom:16}}><input className="form-input" value={nd} onChange={e=>setNd(e.target.value)} placeholder="新しい部室名" onKeyDown={e=>e.key==="Enter"&&addD()}/><button className="btn btn-primary btn-sm" onClick={addD}>追加</button></div>
-            {ld?<div className="loading-center"><span className="spinner"/></div>:<div style={{maxHeight:300,overflowY:"auto"}}>{depts.map(d=>(<div key={d.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)"}}>
-                <span style={{fontSize:14}}>{d.name}{d.is_default&&<span style={{fontSize:11,color:"var(--text-secondary)"}}> (初期値)</span>}</span>
-                <button className="btn btn-ghost btn-sm" style={{color:"var(--danger)",padding:4}} onClick={()=>delD(d.id,d.name)}><IC.Trash/></button>
-            </div>))}</div>}
-        </div><div className="modal-footer"><button className="btn btn-secondary" onClick={onClose}>閉じる</button></div>
+            <div className="tabs">
+                <button className={"tab-btn "+(tab==="departments"?"active":"")} onClick={()=>setTab("departments")}>設置部室</button>
+                {isAdmin&&<button className={"tab-btn "+(tab==="locations"?"active":"")} onClick={()=>setTab("locations")}>設置場所</button>}
+                {isAdmin&&<button className={"tab-btn "+(tab==="users"?"active":"")} onClick={()=>setTab("users")}>ユーザー管理</button>}
+            </div>
+            {tab==="departments"&&<DeptTab/>}
+            {tab==="locations"&&isAdmin&&<LocationTab/>}
+            {tab==="users"&&isAdmin&&<UserTab/>}
+        </div>
+        <div className="modal-footer"><button className="btn btn-secondary" onClick={onClose}>閉じる</button></div>
     </div></div>);
 }
 
-// ============================================================
-// Asset Form
-// ============================================================
-function AssetFormModal({asset,onClose,onSaved}){
-    const isE=!!asset;const toast=useToast();const[depts,setDepts]=useState([]);
-    const[f,setF]=useState({management_code:"",name:"",category:"medical",category_other:"",location:LOCATIONS[0],location_other:"",department:"",department_other:"",purchase_from:"",purchase_price:"",purchase_date:"",has_maintenance:false,maintenance_info:"",maintenance_link:"",depreciation_period_months:"",lease_period_months:"",manager:"",notes:"",...(asset||{})});
+function DeptTab(){
+    const[depts,setDepts]=useState([]);const[nd,setNd]=useState("");const[ld,setLd]=useState(true);const toast=useToast();
+    useEffect(()=>{load();},[]);
+    async function load(){setLd(true);try{const r=await apiFetch("/departments");setDepts(await r.json());}catch{}setLd(false);}
+    async function add(){if(!nd.trim())return;const r=await apiFetch("/departments",{method:"POST",body:JSON.stringify({name:nd.trim()})});if(r.ok){setNd("");toast("追加しました");load();}else{const d=await r.json();toast(d.error,"error");}}
+    async function del(id){await apiFetch("/departments/"+id,{method:"DELETE"});toast("削除しました");load();}
+    return(<div>
+        <div style={{display:"flex",gap:8,marginBottom:16}}><input className="form-input" value={nd} onChange={e=>setNd(e.target.value)} placeholder="新しい部室名" onKeyDown={e=>e.key==="Enter"&&add()}/><button className="btn btn-primary btn-sm" onClick={add}>追加</button></div>
+        {ld?<div className="loading-center"><span className="spinner"/></div>:<div style={{maxHeight:300,overflowY:"auto"}}>{depts.map(d=>(<div key={d.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)"}}>
+            <span style={{fontSize:14}}>{d.name}{d.is_default&&<span style={{fontSize:11,color:"var(--text-secondary)"}}> (初期値)</span>}</span>
+            <button className="btn btn-ghost btn-sm" style={{color:"var(--danger)",padding:4}} onClick={()=>del(d.id)}><IC.Trash/></button>
+        </div>))}</div>}
+    </div>);
+}
+
+function LocationTab(){
+    const[locs,setLocs]=useState([]);const[nl,setNl]=useState("");const[ld,setLd]=useState(true);const toast=useToast();
+    useEffect(()=>{load();},[]);
+    async function load(){setLd(true);try{const r=await apiFetch("/locations");setLocs(await r.json());}catch{}setLd(false);}
+    async function add(){if(!nl.trim())return;const r=await apiFetch("/locations",{method:"POST",body:JSON.stringify({name:nl.trim()})});if(r.ok){setNl("");toast("追加しました");load();}else{const d=await r.json();toast(d.error,"error");}}
+    async function del(id){await apiFetch("/locations/"+id,{method:"DELETE"});toast("削除しました");load();}
+    return(<div>
+        <div style={{display:"flex",gap:8,marginBottom:16}}><input className="form-input" value={nl} onChange={e=>setNl(e.target.value)} placeholder="新しい設置場所名" onKeyDown={e=>e.key==="Enter"&&add()}/><button className="btn btn-primary btn-sm" onClick={add}>追加</button></div>
+        {ld?<div className="loading-center"><span className="spinner"/></div>:<div style={{maxHeight:300,overflowY:"auto"}}>{locs.map(l=>(<div key={l.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)"}}>
+            <span style={{fontSize:14}}>{l.name}</span>
+            <button className="btn btn-ghost btn-sm" style={{color:"var(--danger)",padding:4}} onClick={()=>del(l.id)}><IC.Trash/></button>
+        </div>))}</div>}
+    </div>);
+}
+
+function UserTab(){
+    const[users,setUsers]=useState([]);const[ld,setLd]=useState(true);const[showForm,setShowForm]=useState(false);const[editU,setEditU]=useState(null);
+    const[locs,setLocs]=useState([]);const toast=useToast();
+    useEffect(()=>{load();apiFetch("/locations").then(r=>r.json()).then(setLocs).catch(()=>{});},[]);
+    async function load(){setLd(true);try{const r=await apiFetch("/users");setUsers(await r.json());}catch{}setLd(false);}
+    async function del(id){if(!confirm("このユーザーを削除しますか？"))return;const r=await apiFetch("/users/"+id,{method:"DELETE"});if(r.ok){toast("削除しました");load();}else{const d=await r.json();toast(d.error,"error");}}
+
+    return(<div>
+        <div style={{marginBottom:16}}><button className="btn btn-primary btn-sm" onClick={()=>{setEditU(null);setShowForm(true);}}><IC.Plus/> ユーザー追加</button></div>
+        {ld?<div className="loading-center"><span className="spinner"/></div>:users.map(u=>(<div key={u.id} className="user-row">
+            <div className="info"><strong>{u.display_name||u.username}</strong><span>@{u.username}</span><span style={{marginLeft:8,fontSize:11,padding:"2px 8px",borderRadius:10,background:u.role==="admin"?"var(--accent-light)":"#F0F0F0",color:u.role==="admin"?"var(--accent)":"#666"}}>{u.role==="admin"?"管理者":"一般"}</span>{u.location&&<span style={{marginLeft:8,fontSize:12}}>所属: {u.location}</span>}</div>
+            <div style={{display:"flex",gap:4}}><button className="btn btn-ghost btn-sm" style={{padding:6}} onClick={()=>{setEditU(u);setShowForm(true);}}><IC.Edit/></button><button className="btn btn-ghost btn-sm" style={{padding:6,color:"var(--danger)"}} onClick={()=>del(u.id)}><IC.Trash/></button></div>
+        </div>))}
+        {showForm&&<UserFormModal user={editU} locs={locs} onClose={()=>setShowForm(false)} onSaved={()=>{setShowForm(false);load();}}/>}
+    </div>);
+}
+
+function UserFormModal({user:editUser,locs,onClose,onSaved}){
+    const isE=!!editUser;const toast=useToast();
+    const[f,setF]=useState({username:"",password:"",display_name:"",role:"user",location:"",...(editUser||{})});
     const[err,setErr]=useState("");const[ld,setLd]=useState(false);
-    useEffect(()=>{apiFetch("/departments").then(r=>r.json()).then(setDepts).catch(()=>{});},[]);
-    function s(k){return e=>setF(p=>({...p,[k]:e.target.type==="checkbox"?e.target.checked:e.target.value}));}
+    function s(k){return e=>setF(p=>({...p,[k]:e.target.value}));}
     async function sub(e){e.preventDefault();setLd(true);setErr("");
-        const body={...f};
-        body.purchase_price=body.purchase_price!==""&&body.purchase_price!=null?Number(body.purchase_price):null;
+        try{const body={...f};if(isE&&!body.password)delete body.password;
+            const r=await apiFetch(isE?"/users/"+editUser.id:"/users",{method:isE?"PUT":"POST",body:JSON.stringify(body)});
+            const d=await r.json();if(!r.ok)throw new Error(d.error);toast(isE?"更新しました":"追加しました");onSaved();
+        }catch(e){setErr(e.message);}finally{setLd(false);}
+    }
+    return(<div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()} style={{zIndex:210}}><div className="modal-content" style={{width:450}}>
+        <div className="modal-header"><h2>{isE?"ユーザー編集":"ユーザー追加"}</h2><button className="modal-close" onClick={onClose}><IC.X/></button></div>
+        <form onSubmit={sub}><div className="modal-body">
+            {err&&<div className="alert alert-error">{err}</div>}
+            <div className="form-group"><label>ユーザー名<span className="req">*</span></label><input className="form-input" value={f.username} onChange={s("username")} required disabled={isE}/></div>
+            <div className="form-group"><label>パスワード{!isE&&<span className="req">*</span>}</label><input className="form-input" type="password" value={f.password||""} onChange={s("password")} required={!isE} placeholder={isE?"変更する場合のみ入力":""}/></div>
+            <div className="form-group"><label>表示名</label><input className="form-input" value={f.display_name||""} onChange={s("display_name")}/></div>
+            <div className="form-group"><label>権限</label><select className="form-input" value={f.role} onChange={s("role")}><option value="admin">管理者</option><option value="user">一般</option></select></div>
+            <div className="form-group"><label>所属（設置場所）</label><select className="form-input" value={f.location||""} onChange={s("location")}><option value="">なし（全拠点）</option>{locs.map(l=><option key={l.id} value={l.name}>{l.name}</option>)}</select><p style={{fontSize:11,color:"var(--text-secondary)",marginTop:4}}>サポートチーム＝全拠点操作可。特定院＝その院のみ。</p></div>
+        </div><div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={onClose}>キャンセル</button><button type="submit" className="btn btn-primary" disabled={ld}>{ld?<span className="spinner"/>:(isE?"更新":"追加")}</button></div></form>
+    </div></div>);
+}
+
+/* ===== Asset Form ===== */
+function AssetFormModal({asset,onClose,onSaved}){
+    const isE=!!asset;const toast=useToast();const[depts,setDepts]=useState([]);const[locs,setLocs]=useState([]);
+    const[f,setF]=useState({name:"",category:"medical",category_other:"",location:"",location_other:"",department:"",department_other:"",purchase_from:"",purchase_price:"",purchase_date:"",maintenance_status:"無",maintenance_info:"",maintenance_link:"",depreciation_period_months:"",lease_period_months:"",manager:"",notes:"",...(asset||{})});
+    const[nextCode,setNextCode]=useState(asset?asset.management_code:"...");
+    const[err,setErr]=useState("");const[ld,setLd]=useState(false);
+    useEffect(()=>{apiFetch("/departments").then(r=>r.json()).then(setDepts).catch(()=>{});apiFetch("/locations").then(r=>r.json()).then(setLocs).catch(()=>{});},[]);
+    useEffect(()=>{if(!isE){apiFetch("/assets/next-code/"+f.category).then(r=>r.json()).then(d=>setNextCode(d.code)).catch(()=>{});}},[f.category,isE]);
+    function s(k){return e=>setF(p=>({...p,[k]:e.target.value}));}
+    async function sub(e){e.preventDefault();setLd(true);setErr("");
+        const body={...f};body.purchase_price=body.purchase_price!==""&&body.purchase_price!=null?Number(body.purchase_price):null;
         body.depreciation_period_months=body.depreciation_period_months!==""&&body.depreciation_period_months!=null?Number(body.depreciation_period_months):null;
         body.lease_period_months=body.lease_period_months!==""&&body.lease_period_months!=null?Number(body.lease_period_months):null;
-        try{const r=await apiFetch(isE?"/assets/"+asset.id:"/assets",{method:isE?"PUT":"POST",body:JSON.stringify(body)});const d=await r.json();
-            if(!r.ok)throw new Error(d.error||"保存失敗");toast(isE?"更新しました":"登録しました");onSaved();
+        try{const r=await apiFetch(isE?"/assets/"+asset.id:"/assets",{method:isE?"PUT":"POST",body:JSON.stringify(body)});
+            const d=await r.json();if(!r.ok)throw new Error(d.error||"保存失敗");toast(isE?"更新しました":"登録しました");onSaved();
         }catch(e){setErr(e.message);}finally{setLd(false);}
     }
     return(<div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal-content">
         <div className="modal-header"><h2>{isE?"資産編集":"新規資産登録"}</h2><button className="modal-close" onClick={onClose}><IC.X/></button></div>
         <form onSubmit={sub}><div className="modal-body">
             {err&&<div className="alert alert-error">{err}</div>}
-            <div className="form-row"><div className="form-group"><label>管理番号<span className="required">*必須</span></label><input className="form-input" value={f.management_code} onChange={s("management_code")} required placeholder="例: MED-001"/></div><div className="form-group"><label>資産名<span className="required">*必須</span></label><input className="form-input" value={f.name} onChange={s("name")} required placeholder="例: 超音波診断装置"/></div></div>
-            <div className="form-row"><div className="form-group"><label>種別<span className="required">*必須</span></label><select className="form-input" value={f.category} onChange={s("category")}>{CATEGORIES.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select></div>{f.category==="other"&&<div className="form-group"><label>種別(その他)<span className="required">*必須</span></label><input className="form-input" value={f.category_other} onChange={s("category_other")} required/></div>}</div>
-            <div className="form-row"><div className="form-group"><label>設置場所<span className="required">*必須</span></label><select className="form-input" value={f.location} onChange={s("location")}>{LOCATIONS.map(l=><option key={l} value={l}>{l}</option>)}</select></div>{f.location==="その他"&&<div className="form-group"><label>設置場所(その他)<span className="required">*必須</span></label><input className="form-input" value={f.location_other} onChange={s("location_other")} required/></div>}</div>
-            <div className="form-row"><div className="form-group"><label>設置部室<span className="required">*必須</span></label><select className="form-input" value={f.department} onChange={s("department")}><option value="">選択してください</option>{depts.map(d=><option key={d.id} value={d.name}>{d.name}</option>)}</select></div>{f.department==="その他"&&<div className="form-group"><label>設置部室(その他)<span className="required">*必須</span></label><input className="form-input" value={f.department_other} onChange={s("department_other")} required/></div>}</div>
+            <div className="form-row"><div className="form-group"><label>管理番号（自動採番）</label><input className="form-input" value={isE?asset.management_code:nextCode} disabled style={{fontWeight:600,color:"var(--accent)"}}/></div><div className="form-group"><label>資産名<span className="req">*必須</span></label><input className="form-input" value={f.name} onChange={s("name")} required/></div></div>
+            <div className="form-row"><div className="form-group"><label>種別<span className="req">*必須</span></label><select className="form-input" value={f.category} onChange={s("category")} disabled={isE}>{CATEGORIES.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select></div>{f.category==="other"&&<div className="form-group"><label>種別(その他)<span className="req">*</span></label><input className="form-input" value={f.category_other} onChange={s("category_other")} required/></div>}</div>
+            <div className="form-row"><div className="form-group"><label>設置場所<span className="req">*必須</span></label><select className="form-input" value={f.location} onChange={s("location")} required>{!f.location&&<option value="">選択してください</option>}{locs.map(l=><option key={l.id} value={l.name}>{l.name}</option>)}<option value="その他">その他</option></select></div>{f.location==="その他"&&<div className="form-group"><label>設置場所(その他)<span className="req">*</span></label><input className="form-input" value={f.location_other} onChange={s("location_other")} required/></div>}</div>
+            <div className="form-row"><div className="form-group"><label>設置部室</label><select className="form-input" value={f.department} onChange={s("department")}><option value="">選択してください</option>{depts.map(d=><option key={d.id} value={d.name}>{d.name}</option>)}</select></div>{f.department==="その他"&&<div className="form-group"><label>設置部室(その他)</label><input className="form-input" value={f.department_other} onChange={s("department_other")}/></div>}</div>
             <div className="form-row"><div className="form-group"><label>購入元</label><input className="form-input" value={f.purchase_from||""} onChange={s("purchase_from")}/></div><div className="form-group"><label>購入金額(円)</label><input className="form-input" type="number" value={f.purchase_price||""} onChange={s("purchase_price")}/></div></div>
             <div className="form-row"><div className="form-group"><label>購入日</label><input className="form-input" type="date" value={f.purchase_date||""} onChange={s("purchase_date")}/></div><div className="form-group"><label>管理者</label><input className="form-input" value={f.manager||""} onChange={s("manager")}/></div></div>
             <div className="form-row"><div className="form-group"><label>減価償却期間(月)</label><input className="form-input" type="number" value={f.depreciation_period_months||""} onChange={s("depreciation_period_months")}/></div><div className="form-group"><label>リース期間(月)</label><input className="form-input" type="number" value={f.lease_period_months||""} onChange={s("lease_period_months")}/></div></div>
-            <div className="form-group"><label style={{display:"flex",alignItems:"center",gap:8}}><input type="checkbox" checked={f.has_maintenance} onChange={s("has_maintenance")}/>保守契約あり</label></div>
-            {f.has_maintenance&&<><div className="form-group"><label>保守情報</label><textarea className="form-input" value={f.maintenance_info||""} onChange={s("maintenance_info")}/></div><div className="form-group"><label>保守参照リンク</label><input className="form-input" value={f.maintenance_link||""} onChange={s("maintenance_link")} placeholder="https://..."/></div></>}
+            <div className="form-group"><label>保守契約</label><div style={{display:"flex",gap:12}}>{MAINT_OPTIONS.map(o=><label key={o} style={{display:"flex",alignItems:"center",gap:4,fontSize:14,cursor:"pointer"}}><input type="radio" name="maint" value={o} checked={f.maintenance_status===o} onChange={()=>setF(p=>({...p,maintenance_status:o}))}/>{o}</label>)}</div></div>
+            {f.maintenance_status==="有"&&<><div className="form-group"><label>保守情報</label><textarea className="form-input" value={f.maintenance_info||""} onChange={s("maintenance_info")}/></div><div className="form-group"><label>保守参照リンク</label><input className="form-input" value={f.maintenance_link||""} onChange={s("maintenance_link")} placeholder="https://..."/></div></>}
             <div className="form-group"><label>備考</label><textarea className="form-input" value={f.notes||""} onChange={s("notes")}/></div>
         </div><div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={onClose}>キャンセル</button><button type="submit" className="btn btn-primary" disabled={ld}>{ld?<span className="spinner"/>:(isE?"更新":"登録")}</button></div></form>
-    </div></div>);
-}
-// ============================================================
-// CSV Import Modal
-// ============================================================
-function CsvImportModal({onClose,onDone}){
-    const toast=useToast();
-    const[file,setFile]=useState(null);
-    const[ld,setLd]=useState(false);
-    const[result,setResult]=useState(null);
-    const fileRef=useRef(null);
-
-    async function downloadTemplate(){
-        try{const token=getToken();
-            const r=await fetch(API_BASE+"/api/assets/upload-template",{headers:{"Authorization":"Bearer "+token}});
-            const b=await r.blob();const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="import_template.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
-            toast("テンプレートをダウンロードしました");
-        }catch{toast("ダウンロード失敗","error");}
-    }
-
-    async function handleUpload(){
-        if(!file)return;
-        setLd(true);setResult(null);
-        try{
-            const token=getToken();
-            const fd=new FormData();
-            fd.append("file",file);
-            const r=await fetch(API_BASE+"/api/assets/upload",{method:"POST",headers:{"Authorization":"Bearer "+token},body:fd});
-            const d=await r.json();
-            if(!r.ok)throw new Error(d.error||"アップロード失敗");
-            setResult(d);
-            if(d.created>0)onDone();
-        }catch(e){setResult({error:e.message});}
-        finally{setLd(false);}
-    }
-
-    return(<div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal-content" style={{width:560}}>
-        <div className="modal-header"><h2>CSVインポート</h2><button className="modal-close" onClick={onClose}><IC.X/></button></div>
-        <div className="modal-body">
-            <p style={{fontSize:14,marginBottom:16,color:"var(--text-secondary)"}}>CSVファイルから資産を一括登録します。既存の管理番号と重複する行はスキップされます。</p>
-
-            <div style={{marginBottom:20}}>
-                <button className="btn btn-ghost btn-sm" onClick={downloadTemplate} style={{marginBottom:12}}><IC.Download/> テンプレートCSVをダウンロード</button>
-            </div>
-
-            <div style={{border:"2px dashed var(--border)",borderRadius:8,padding:24,textAlign:"center",marginBottom:20,background:"#FAFBFC",cursor:"pointer"}} onClick={()=>fileRef.current&&fileRef.current.click()}>
-                <input ref={fileRef} type="file" accept=".csv" style={{display:"none"}} onChange={e=>{setFile(e.target.files[0]||null);setResult(null);}}/>
-                <IC.Upload/>
-                {file?<p style={{fontSize:14,marginTop:8,fontWeight:500}}>{file.name}</p>
-                :<p style={{fontSize:13,color:"var(--text-secondary)",marginTop:8}}>クリックしてCSVファイルを選択</p>}
-            </div>
-
-            {result&&!result.error&&<div style={{background:"var(--success-light)",border:"1px solid #A3D9B1",borderRadius:6,padding:12,marginBottom:12}}>
-                <p style={{fontSize:14,fontWeight:500,color:"var(--success)"}}>{result.message}</p>
-                {result.skipped>0&&<p style={{fontSize:13,color:"var(--text-secondary)",marginTop:4}}>スキップ: {result.skipped}件</p>}
-                {result.errors&&result.errors.length>0&&<div style={{marginTop:8,fontSize:12,color:"var(--danger)"}}>{result.errors.map((e,i)=><div key={i}>{e}</div>)}</div>}
-            </div>}
-            {result&&result.error&&<div className="alert alert-error">{result.error}</div>}
-        </div>
-        <div className="modal-footer">
-            <button className="btn btn-secondary" onClick={onClose}>閉じる</button>
-            <button className="btn btn-primary" onClick={handleUpload} disabled={!file||ld}>{ld?<span className="spinner"/>:"インポート実行"}</button>
-        </div>
     </div></div>);
 }
 
 function ConfirmDialog({message,onConfirm,onCancel}){return(<div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onCancel()}><div className="modal-content" style={{width:400}}><div className="modal-body"><p style={{fontSize:15,marginBottom:20}}>{message}</p><div className="confirm-actions"><button className="btn btn-secondary" onClick={onCancel}>キャンセル</button><button className="btn btn-danger" onClick={onConfirm}>削除</button></div></div></div></div>);}
 
-// ============================================================
-// Dashboard
-// ============================================================
+/* ===== CSV Import ===== */
+function CsvImportModal({onClose,onDone}){
+    const toast=useToast();const[file,setFile]=useState(null);const[ld,setLd]=useState(false);const[result,setResult]=useState(null);const fileRef=useRef(null);
+    async function downloadTpl(){try{const token=getToken();const r=await fetch(API_BASE+"/api/assets/upload-template",{headers:{"Authorization":"Bearer "+token}});const b=await r.blob();const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="import_template.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);toast("テンプレートDL完了");}catch{toast("失敗","error");}}
+    async function upload(){if(!file)return;setLd(true);setResult(null);try{const token=getToken();const fd=new FormData();fd.append("file",file);const r=await fetch(API_BASE+"/api/assets/upload",{method:"POST",headers:{"Authorization":"Bearer "+token},body:fd});const d=await r.json();if(!r.ok)throw new Error(d.error);setResult(d);if(d.created>0)onDone();}catch(e){setResult({error:e.message});}finally{setLd(false);}}
+    return(<div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal-content" style={{width:560}}>
+        <div className="modal-header"><h2>CSVインポート</h2><button className="modal-close" onClick={onClose}><IC.X/></button></div>
+        <div className="modal-body">
+            <p style={{fontSize:14,marginBottom:12,color:"var(--text-secondary)"}}>CSVから一括登録。管理番号は自動採番されます。CSV内の旧管理番号は備考に記録されます。</p>
+            <button className="btn btn-ghost btn-sm" onClick={downloadTpl} style={{marginBottom:16}}><IC.Download/> テンプレートCSV</button>
+            <div style={{border:"2px dashed var(--border)",borderRadius:8,padding:24,textAlign:"center",marginBottom:16,background:"#FAFBFC",cursor:"pointer"}} onClick={()=>fileRef.current&&fileRef.current.click()}>
+                <input ref={fileRef} type="file" accept=".csv" style={{display:"none"}} onChange={e=>{setFile(e.target.files[0]||null);setResult(null);}}/>
+                <IC.Upload/>{file?<p style={{fontSize:14,marginTop:8,fontWeight:500}}>{file.name}</p>:<p style={{fontSize:13,color:"var(--text-secondary)",marginTop:8}}>CSVファイルを選択</p>}
+            </div>
+            {result&&!result.error&&<div style={{background:"var(--success-light)",border:"1px solid #A3D9B1",borderRadius:6,padding:12}}><p style={{fontSize:14,fontWeight:500,color:"var(--success)"}}>{result.message}</p>{result.skipped>0&&<p style={{fontSize:13,color:"var(--text-secondary)",marginTop:4}}>スキップ: {result.skipped}件</p>}{result.errors&&result.errors.length>0&&<div style={{marginTop:8,fontSize:12,color:"var(--danger)"}}>{result.errors.map((e,i)=><div key={i}>{e}</div>)}</div>}</div>}
+            {result&&result.error&&<div className="alert alert-error">{result.error}</div>}
+        </div>
+        <div className="modal-footer"><button className="btn btn-secondary" onClick={onClose}>閉じる</button><button className="btn btn-primary" onClick={upload} disabled={!file||ld}>{ld?<span className="spinner"/>:"インポート実行"}</button></div>
+    </div></div>);
+}
+
+/* ===== Dashboard ===== */
 function DashboardPage(){
     const[stats,setStats]=useState(null);const[ld,setLd]=useState(true);
     useEffect(()=>{apiFetch("/stats").then(r=>r.json()).then(setStats).catch(()=>{}).finally(()=>setLd(false));},[]);
@@ -341,45 +350,42 @@ function DashboardPage(){
     </div>);
 }
 
-// ============================================================
-// Assets List
-// ============================================================
-function AssetsPage(){
-    const toast=useToast();
-    const[assets,setAssets]=useState([]);const[total,setTotal]=useState(0);const[page,setPage]=useState(1);const[pages,setPages]=useState(1);
-    const[ld,setLd]=useState(true);const[search,setSearch]=useState("");const[fCat,setFCat]=useState("");const[fLoc,setFLoc]=useState("");
-    const[showForm,setShowForm]=useState(false);const[editA,setEditA]=useState(null);const[confirmDel,setConfirmDel]=useState(null);
-    const[showImport,setShowImport]=useState(false);
+/* ===== Assets List ===== */
+function AssetsPage({user}){
+    const toast=useToast();const[assets,setAssets]=useState([]);const[total,setTotal]=useState(0);const[page,setPage]=useState(1);const[pages,setPages]=useState(1);
+    const[ld,setLd]=useState(true);const[locs,setLocs]=useState([]);
+    // Filters (use refs for stable load function)
+    const[search,setSearch]=useState("");const[fCat,setFCat]=useState("");const[fLoc,setFLoc]=useState("");const[dateFrom,setDateFrom]=useState("");const[dateTo,setDateTo]=useState("");
+    const searchRef=useRef("");const catRef=useRef("");const locRef=useRef("");const dfRef=useRef("");const dtRef=useRef("");
+    const[showForm,setShowForm]=useState(false);const[editA,setEditA]=useState(null);const[confirmDel,setConfirmDel]=useState(null);const[showImport,setShowImport]=useState(false);
     const stRef=useRef(null);
-    const searchRef=useRef("");
-    const catRef=useRef("");
-    const locRef=useRef("");
+
+    useEffect(()=>{apiFetch("/locations").then(r=>r.json()).then(setLocs).catch(()=>{});load(1);},[]);
 
     const load=useCallback(async(p,opts={})=>{setLd(true);
         const s=opts.search!==undefined?opts.search:searchRef.current;
         const c=opts.category!==undefined?opts.category:catRef.current;
         const l=opts.location!==undefined?opts.location:locRef.current;
-        const params=new URLSearchParams({page:p||page,per_page:50});
+        const df=opts.date_from!==undefined?opts.date_from:dfRef.current;
+        const dt=opts.date_to!==undefined?opts.date_to:dtRef.current;
+        const params=new URLSearchParams({page:p||1,per_page:50});
         if(s)params.set("search",s);if(c)params.set("category",c);if(l)params.set("location",l);
+        if(df)params.set("date_from",df);if(dt)params.set("date_to",dt);
         try{const r=await apiFetch("/assets?"+params);const d=await r.json();setAssets(d.items);setTotal(d.total);setPages(d.pages);setPage(d.page);}catch{}
         setLd(false);
-    },[page]);
-
-    useEffect(()=>{load(1);},[]);
+    },[]);
 
     function onSearch(e){const v=e.target.value;setSearch(v);searchRef.current=v;clearTimeout(stRef.current);stRef.current=setTimeout(()=>load(1,{search:v}),400);}
+    function onCat(e){const v=e.target.value;setFCat(v);catRef.current=v;load(1,{category:v});}
+    function onLoc(e){const v=e.target.value;setFLoc(v);locRef.current=v;load(1,{location:v});}
+    function onDateFrom(e){const v=e.target.value;setDateFrom(v);dfRef.current=v;load(1,{date_from:v});}
+    function onDateTo(e){const v=e.target.value;setDateTo(v);dtRef.current=v;load(1,{date_to:v});}
 
     async function handleDel(){if(!confirmDel)return;await apiFetch("/assets/"+confirmDel.id,{method:"DELETE"});toast("削除しました");setConfirmDel(null);load(page);}
+    async function handleDL(fmt){try{const token=getToken();const r=await fetch(API_BASE+"/api/assets/download?format="+fmt,{headers:{"Authorization":"Bearer "+token}});const b=await r.blob();const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="assets."+fmt;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);toast(fmt.toUpperCase()+" DL完了");}catch{toast("失敗","error");}}
 
-    async function handleDL(fmt){
-        try{const token=getToken();
-            const r=await fetch(API_BASE+"/api/assets/download?format="+fmt,{headers:{"Authorization":"Bearer "+token}});
-            const b=await r.blob();const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="assets."+fmt;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
-            toast(fmt.toUpperCase()+" ダウンロード完了");
-        }catch{toast("ダウンロード失敗","error");}
-    }
-
-    function catBadge(c){return<span className={"badge "+(c==="medical"?"badge-medical":c==="electronic"?"badge-electronic":"badge-other")}>{CATEGORY_MAP[c]||c}</span>;}
+    function catBadge(c){const cls={medical:"badge-medical",medical_supply:"badge-supply",electronic:"badge-electronic",intangible:"badge-intangible"}[c]||"badge-other";return<span className={"badge "+cls}>{CATEGORY_MAP[c]||c}</span>;}
+    function maintBadge(s){return<span className={"badge "+(s==="有"?"badge-yes":s==="不明"?"badge-unknown":"badge-no")}>{s||"無"}</span>;}
 
     return(<div>
         <div className="page-header"><h1>資産一覧</h1><div className="page-header-actions">
@@ -389,68 +395,60 @@ function AssetsPage(){
             <button className="btn btn-primary btn-sm" onClick={()=>{setEditA(null);setShowForm(true);}}><IC.Plus/> 新規登録</button>
         </div></div>
         <div className="card" style={{marginBottom:24}}><div className="card-body" style={{padding:16}}><div className="filter-bar">
-            <div className="search-box"><IC.Search/><input className="form-input" placeholder="名前・管理番号・管理者で検索…" value={search} onChange={onSearch}/></div>
-            <select className="form-input filter-select" value={fCat} onChange={e=>{const v=e.target.value;setFCat(v);catRef.current=v;load(1,{category:v});}}><option value="">全種別</option>{CATEGORIES.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select>
-            <select className="form-input filter-select" value={fLoc} onChange={e=>{const v=e.target.value;setFLoc(v);locRef.current=v;load(1,{location:v});}}><option value="">全設置場所</option>{LOCATIONS.map(l=><option key={l} value={l}>{l}</option>)}</select>
+            <div className="search-box"><IC.Search/><input className="form-input" placeholder="名前・番号・管理者…" value={search} onChange={onSearch}/></div>
+            <select className="form-input filter-select" value={fCat} onChange={onCat}><option value="">全種別</option>{CATEGORIES.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select>
+            <select className="form-input filter-select" value={fLoc} onChange={onLoc}><option value="">全場所</option>{locs.map(l=><option key={l.id} value={l.name}>{l.name}</option>)}</select>
+            <input className="form-input filter-date" type="date" value={dateFrom} onChange={onDateFrom} title="購入日From"/>
+            <span style={{color:"var(--text-secondary)",fontSize:13}}>〜</span>
+            <input className="form-input filter-date" type="date" value={dateTo} onChange={onDateTo} title="購入日To"/>
         </div></div></div>
         <div className="card">{ld?<div className="loading-center"><span className="spinner"/></div>
-        :assets.length===0?<div className="empty-state"><IC.Box/><h3>資産が見つかりません</h3><p>「新規登録」から資産を登録してください</p><button className="btn btn-primary btn-sm" onClick={()=>{setEditA(null);setShowForm(true);}}><IC.Plus/> 新規登録</button></div>
-        :<><div className="table-wrapper"><table><thead><tr><th>管理番号</th><th>資産名</th><th>種別</th><th>設置場所</th><th>設置部室</th><th>購入金額</th><th>保守</th><th>管理者</th><th style={{width:90}}>操作</th></tr></thead><tbody>
+        :assets.length===0?<div className="empty-state"><IC.Box/><h3>資産が見つかりません</h3><p>条件を変更するか新規登録してください</p></div>
+        :<><div className="table-wrapper"><table><thead><tr><th>管理番号</th><th>資産名</th><th>種別</th><th>設置場所</th><th>設置部室</th><th>購入日</th><th>購入金額</th><th>保守</th><th>管理者</th><th style={{width:80}}>操作</th></tr></thead><tbody>
             {assets.map(a=><tr key={a.id}>
                 <td><strong style={{color:"var(--accent)"}}>{a.management_code}</strong></td><td>{a.name}</td><td>{catBadge(a.category)}</td>
-                <td>{a.location==="その他"&&a.location_other?"その他("+a.location_other+")":a.location}</td>
-                <td>{a.department==="その他"&&a.department_other?"その他("+a.department_other+")":a.department}</td>
+                <td>{a.location}</td><td>{a.department}</td>
+                <td style={{whiteSpace:"nowrap"}}>{a.purchase_date||"—"}</td>
                 <td style={{textAlign:"right"}}>{a.purchase_price!=null?"¥"+Number(a.purchase_price).toLocaleString():"—"}</td>
-                <td>{a.has_maintenance?<span className="badge badge-yes">有</span>:<span className="badge badge-no">無</span>}</td>
+                <td>{maintBadge(a.maintenance_status)}</td>
                 <td>{a.manager||"—"}</td>
                 <td><div style={{display:"flex",gap:4}}><button className="btn btn-ghost btn-sm" style={{padding:6}} onClick={()=>{setEditA(a);setShowForm(true);}}><IC.Edit/></button><button className="btn btn-ghost btn-sm" style={{padding:6,color:"var(--danger)"}} onClick={()=>setConfirmDel(a)}><IC.Trash/></button></div></td>
             </tr>)}</tbody></table></div>
-            <div className="pagination" style={{padding:"12px 16px"}}><span>{total}件中 {(page-1)*50+1}〜{Math.min(page*50,total)}件</span>
+            <div className="pagination"><span>{total}件中 {Math.min((page-1)*50+1,total)}〜{Math.min(page*50,total)}件</span>
                 <div className="pagination-btns"><button disabled={page<=1} onClick={()=>load(page-1)}>‹</button>
-                {Array.from({length:Math.min(pages,5)},(_,i)=>{const p=i+1;return<button key={p} className={p===page?"active":""} onClick={()=>load(p)}>{p}</button>;})}
+                {Array.from({length:Math.min(pages,7)},(_,i)=>{const p=i+1;return<button key={p} className={p===page?"active":""} onClick={()=>load(p)}>{p}</button>;})}
                 <button disabled={page>=pages} onClick={()=>load(page+1)}>›</button></div>
             </div></>}
         </div>
         {showForm&&<AssetFormModal asset={editA} onClose={()=>setShowForm(false)} onSaved={()=>{setShowForm(false);load(page);}}/>}
-        {confirmDel&&<ConfirmDialog message={"「"+confirmDel.name+"」("+confirmDel.management_code+") を削除しますか？"} onConfirm={handleDel} onCancel={()=>setConfirmDel(null)}/>}
+        {confirmDel&&<ConfirmDialog message={"「"+confirmDel.name+"」("+confirmDel.management_code+") を削除しますか？\n※データはDB上で非表示となり復元可能です"} onConfirm={handleDel} onCancel={()=>setConfirmDel(null)}/>}
         {showImport&&<CsvImportModal onClose={()=>setShowImport(false)} onDone={()=>load(1)}/>}
     </div>);
 }
 
-// ============================================================
-// App
-// ============================================================
+/* ===== App ===== */
 function App(){
-    const[user,setUser]=useState(null);const[pg,setPg]=useState("dashboard");const[sb,setSb]=useState(false);const[showSet,setShowSet]=useState(false);
-    const[checking,setChecking]=useState(true);
-
-    useEffect(()=>{
-        const token=getToken();
-        if(token){apiFetch("/auth/me").then(r=>{if(r.ok)return r.json();throw new Error();}).then(setUser).catch(()=>clearToken()).finally(()=>setChecking(false));}
-        else setChecking(false);
-    },[]);
-
+    const[user,setUser]=useState(null);const[pg,setPg]=useState("dashboard");const[sb,setSb]=useState(false);const[showSet,setShowSet]=useState(false);const[checking,setChecking]=useState(true);
+    useEffect(()=>{const token=getToken();if(token){apiFetch("/auth/me").then(r=>{if(r.ok)return r.json();throw new Error();}).then(setUser).catch(()=>clearToken()).finally(()=>setChecking(false));}else setChecking(false);},[]);
     function logout(){clearToken();setUser(null);}
-
     if(checking)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh"}}><span className="spinner"/></div>;
     if(!user)return<LoginScreen onLogin={setUser}/>;
-
     return(<div className="app-layout">
         <button className="mobile-menu-btn" onClick={()=>setSb(!sb)}><IC.Menu/></button>
         <aside className={"sidebar "+(sb?"open":"")}>
-            <div className="sidebar-brand"><h2>資産管理</h2><span>Asset Management</span></div>
+            <div className="sidebar-brand"><h2>資産管理</h2><span>{user.display_name||user.username}{user.location?" / "+user.location:""}</span></div>
             <nav className="sidebar-nav">
                 <button className={"sidebar-nav-item "+(pg==="dashboard"?"active":"")} onClick={()=>{setPg("dashboard");setSb(false);}}><IC.Dashboard/>ダッシュボード</button>
                 <button className={"sidebar-nav-item "+(pg==="assets"?"active":"")} onClick={()=>{setPg("assets");setSb(false);}}><IC.List/>資産一覧</button>
                 <button className="sidebar-nav-item" onClick={()=>setShowSet(true)}><IC.Settings/>設定</button>
             </nav>
-            <div className="sidebar-footer"><div style={{fontSize:13,marginBottom:8}}><span style={{color:"#fff"}}>{user.display_name||user.username}</span></div><button onClick={logout}><IC.Logout/> ログアウト</button></div>
+            <div className="sidebar-footer"><button onClick={logout}><IC.Logout/> ログアウト</button></div>
         </aside>
         <main className="main-content">
             {pg==="dashboard"&&<DashboardPage key={"d"+Date.now()}/>}
-            {pg==="assets"&&<AssetsPage/>}
+            {pg==="assets"&&<AssetsPage user={user}/>}
         </main>
-        {showSet&&<SettingsModal onClose={()=>setShowSet(false)}/>}
+        {showSet&&<SettingsModal onClose={()=>setShowSet(false)} user={user}/>}
     </div>);
 }
 ReactDOM.createRoot(document.getElementById("root")).render(<ToastProvider><App/></ToastProvider>);
