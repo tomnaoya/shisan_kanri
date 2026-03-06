@@ -26,6 +26,7 @@ except PermissionError:
     os.makedirs(DATA_DIR, exist_ok=True)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DATA_DIR}/assets.db"
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"connect_args": {"timeout": 30}}
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "change-me-in-production")
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=8)
