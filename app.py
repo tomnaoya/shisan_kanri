@@ -973,12 +973,11 @@ def serve_frontend():
 # Startup
 # ---------------------------------------------------------------------------
 
-with app.app_context():
-    db.create_all()
-
-    # Migrate existing tables: add missing columns
-    import sqlite3 as _sqlite3
-    _conn = _sqlite3.connect(f"{DATA_DIR}/assets.db")
+# --- Step 1: raw SQLite migration (before SQLAlchemy touches the DB) ---
+import sqlite3 as _sqlite3
+_db_path = f"{DATA_DIR}/assets.db"
+if os.path.exists(_db_path):
+    _conn = _sqlite3.connect(_db_path)
     _cur = _conn.cursor()
 
     def _add_col(table, column, col_type, default=None):
@@ -997,6 +996,9 @@ with app.app_context():
     _conn.commit()
     _conn.close()
 
+# --- Step 2: SQLAlchemy init ---
+with app.app_context():
+    db.create_all()
     seed_data()
     migrate_data()
 
