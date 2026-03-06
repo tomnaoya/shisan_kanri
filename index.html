@@ -69,6 +69,7 @@ tbody tr{transition:background var(--transition)}tbody tr:hover{background:#F8F9
 .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500}
 .badge-medical{background:#EBF0F7;color:var(--accent)}.badge-electronic{background:var(--success-light);color:var(--success)}.badge-other{background:#F0F0F0;color:#666}
 .badge-supply{background:var(--warning-light);color:var(--warning)}.badge-intangible{background:#E8E0F0;color:#6C3483}
+.badge-active{background:var(--success-light);color:var(--success)}.badge-dormant{background:var(--warning-light);color:var(--warning)}.badge-disposed{background:#F0F0F0;color:#999}
 .badge-yes{background:var(--success-light);color:var(--success)}.badge-no{background:#F0F0F0;color:#999}.badge-unknown{background:var(--warning-light);color:var(--warning)}
 .filter-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 .filter-bar .search-box{flex:1;min-width:180px;position:relative}
@@ -118,8 +119,8 @@ tbody tr{transition:background var(--transition)}tbody tr:hover{background:#F8F9
 <script type="text/babel">
 const{useState,useEffect,useCallback,useRef,createContext,useContext}=React;
 const API_BASE="";
-const CATEGORIES=[{value:"medical",label:"医療機器"},{value:"medical_supply",label:"医療資材"},{value:"electronic",label:"電子機器"},{value:"software",label:"ソフトウェア"},{value:"equipment",label:"器具備品"},{value:"intangible",label:"非実在資産"},{value:"other",label:"その他"}];
-const CATEGORY_MAP={medical:"医療機器",medical_supply:"医療資材",electronic:"電子機器",software:"ソフトウェア",equipment:"器具備品",intangible:"非実在資産",other:"その他"};
+const CATEGORIES=[{value:"medical",label:"医療機器"},{value:"medical_supply",label:"医療資材"},{value:"electronic",label:"電子機器"},{value:"intangible",label:"非実在資産"},{value:"other",label:"その他"}];
+const CATEGORY_MAP={medical:"医療機器",medical_supply:"医療資材",electronic:"電子機器",intangible:"非実在資産",other:"その他"};
 const MAINT_OPTIONS=["有","無","不明"];
 
 let authToken=null;
@@ -272,7 +273,7 @@ function UserFormModal({user:editUser,locs,onClose,onSaved}){
 /* ===== Asset Form ===== */
 function AssetFormModal({asset,onClose,onSaved}){
     const isE=!!asset;const toast=useToast();const[depts,setDepts]=useState([]);const[locs,setLocs]=useState([]);
-    const[f,setF]=useState({name:"",category:"medical",category_other:"",location:"",location_other:"",department:"",department_other:"",purchase_from:"",purchase_price:"",purchase_date:"",maintenance_status:"無",maintenance_info:"",maintenance_link:"",depreciation_period_months:"",lease_period_months:"",manager:"",notes:"",...(asset||{})});
+    const[f,setF]=useState({name:"",category:"medical",category_other:"",location:"",location_other:"",department:"",department_other:"",purchase_from:"",purchase_price:"",purchase_date:"",maintenance_status:"無",operating_status:"稼働中",maintenance_info:"",maintenance_link:"",depreciation_period_months:"",lease_period_months:"",manager:"",notes:"",...(asset||{})});
     const[nextCode,setNextCode]=useState(asset?asset.management_code:"...");
     const[err,setErr]=useState("");const[ld,setLd]=useState(false);
     useEffect(()=>{apiFetch("/departments").then(r=>r.json()).then(setDepts).catch(()=>{});apiFetch("/locations").then(r=>r.json()).then(setLocs).catch(()=>{});},[]);
@@ -297,6 +298,7 @@ function AssetFormModal({asset,onClose,onSaved}){
             <div className="form-row"><div className="form-group"><label>購入元</label><input className="form-input" value={f.purchase_from||""} onChange={s("purchase_from")}/></div><div className="form-group"><label>購入金額(円)</label><input className="form-input" type="number" value={f.purchase_price||""} onChange={s("purchase_price")}/></div></div>
             <div className="form-row"><div className="form-group"><label>購入日</label><input className="form-input" type="date" value={f.purchase_date||""} onChange={s("purchase_date")}/></div><div className="form-group"><label>管理者</label><input className="form-input" value={f.manager||""} onChange={s("manager")}/></div></div>
             <div className="form-row"><div className="form-group"><label>減価償却期間(月)</label><input className="form-input" type="number" value={f.depreciation_period_months||""} onChange={s("depreciation_period_months")}/></div><div className="form-group"><label>リース期間(月)</label><input className="form-input" type="number" value={f.lease_period_months||""} onChange={s("lease_period_months")}/></div></div>
+            <div className="form-group"><label>稼働状況</label><div style={{display:"flex",gap:12}}>{["稼働中","休眠","廃棄済"].map(o=><label key={o} style={{display:"flex",alignItems:"center",gap:4,fontSize:14,cursor:"pointer"}}><input type="radio" name="opst" value={o} checked={f.operating_status===o} onChange={()=>setF(p=>({...p,operating_status:o}))}/>{o}</label>)}</div></div>
             <div className="form-group"><label>保守契約</label><div style={{display:"flex",gap:12}}>{MAINT_OPTIONS.map(o=><label key={o} style={{display:"flex",alignItems:"center",gap:4,fontSize:14,cursor:"pointer"}}><input type="radio" name="maint" value={o} checked={f.maintenance_status===o} onChange={()=>setF(p=>({...p,maintenance_status:o}))}/>{o}</label>)}</div></div>
             {f.maintenance_status==="有"&&<><div className="form-group"><label>保守情報</label><textarea className="form-input" value={f.maintenance_info||""} onChange={s("maintenance_info")}/></div><div className="form-group"><label>保守参照リンク</label><input className="form-input" value={f.maintenance_link||""} onChange={s("maintenance_link")} placeholder="https://..."/></div></>}
             <div className="form-group"><label>備考</label><textarea className="form-input" value={f.notes||""} onChange={s("notes")}/></div>
@@ -356,7 +358,9 @@ function AssetsPage({user}){
     const[ld,setLd]=useState(true);const[locs,setLocs]=useState([]);
     // Filters (use refs for stable load function)
     const[search,setSearch]=useState("");const[fCat,setFCat]=useState("");const[fLoc,setFLoc]=useState("");const[dateFrom,setDateFrom]=useState("");const[dateTo,setDateTo]=useState("");
+    const[opStatus,setOpStatus]=useState(["稼働中","休眠"]);
     const searchRef=useRef("");const catRef=useRef("");const locRef=useRef("");const dfRef=useRef("");const dtRef=useRef("");
+    const opRef=useRef(["稼働中","休眠"]);
     const[showForm,setShowForm]=useState(false);const[editA,setEditA]=useState(null);const[confirmDel,setConfirmDel]=useState(null);const[showImport,setShowImport]=useState(false);
     const stRef=useRef(null);
 
@@ -371,6 +375,8 @@ function AssetsPage({user}){
         const params=new URLSearchParams({page:p||1,per_page:50});
         if(s)params.set("search",s);if(c)params.set("category",c);if(l)params.set("location",l);
         if(df)params.set("date_from",df);if(dt)params.set("date_to",dt);
+        const op=opts.operating_status!==undefined?opts.operating_status:opRef.current;
+        if(op&&op.length>0)op.forEach(s=>params.append("operating_status",s));
         try{const r=await apiFetch("/assets?"+params);const d=await r.json();setAssets(d.items);setTotal(d.total);setPages(d.pages);setPage(d.page);}catch{}
         setLd(false);
     },[]);
@@ -384,7 +390,7 @@ function AssetsPage({user}){
     async function handleDel(){if(!confirmDel)return;await apiFetch("/assets/"+confirmDel.id,{method:"DELETE"});toast("削除しました");setConfirmDel(null);load(page);}
     async function handleDL(fmt){try{const token=getToken();const r=await fetch(API_BASE+"/api/assets/download?format="+fmt,{headers:{"Authorization":"Bearer "+token}});const b=await r.blob();const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="assets."+fmt;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);toast(fmt.toUpperCase()+" DL完了");}catch{toast("失敗","error");}}
 
-    function catBadge(c){const cls={medical:"badge-medical",medical_supply:"badge-supply",electronic:"badge-electronic",software:"badge-supply",equipment:"badge-electronic",intangible:"badge-intangible"}[c]||"badge-other";return<span className={"badge "+cls}>{CATEGORY_MAP[c]||c}</span>;}
+    function catBadge(c){const cls={medical:"badge-medical",medical_supply:"badge-supply",electronic:"badge-electronic",intangible:"badge-intangible"}[c]||"badge-other";return<span className={"badge "+cls}>{CATEGORY_MAP[c]||c}</span>;}
     function maintBadge(s){return<span className={"badge "+(s==="有"?"badge-yes":s==="不明"?"badge-unknown":"badge-no")}>{s||"無"}</span>;}
 
     return(<div>
@@ -401,16 +407,18 @@ function AssetsPage({user}){
             <input className="form-input filter-date" type="date" value={dateFrom} onChange={onDateFrom} title="購入日From"/>
             <span style={{color:"var(--text-secondary)",fontSize:13}}>〜</span>
             <input className="form-input filter-date" type="date" value={dateTo} onChange={onDateTo} title="購入日To"/>
+            <div style={{display:"flex",gap:10,alignItems:"center",fontSize:13}}>{["稼働中","休眠","廃棄済"].map(s=><label key={s} style={{display:"flex",alignItems:"center",gap:3,cursor:"pointer",whiteSpace:"nowrap"}}><input type="checkbox" checked={opStatus.includes(s)} onChange={e=>{const next=e.target.checked?[...opStatus,s]:opStatus.filter(x=>x!==s);setOpStatus(next);opRef.current=next;load(1,{operating_status:next});}}/>{s}</label>)}</div>
         </div></div></div>
         <div className="card">{ld?<div className="loading-center"><span className="spinner"/></div>
         :assets.length===0?<div className="empty-state"><IC.Box/><h3>資産が見つかりません</h3><p>条件を変更するか新規登録してください</p></div>
-        :<><div className="table-wrapper"><table><thead><tr><th>管理番号</th><th>資産名</th><th>種別</th><th>設置場所</th><th>設置部室</th><th>購入日</th><th>購入金額</th><th>保守</th><th>管理者</th><th style={{width:80}}>操作</th></tr></thead><tbody>
+        :<><div className="table-wrapper"><table><thead><tr><th>管理番号</th><th>資産名</th><th>種別</th><th>設置場所</th><th>設置部室</th><th>購入日</th><th>購入金額</th><th>保守</th><th>稼働状況</th><th>管理者</th><th style={{width:80}}>操作</th></tr></thead><tbody>
             {assets.map(a=><tr key={a.id}>
                 <td><strong style={{color:"var(--accent)"}}>{a.management_code}</strong></td><td>{a.name}</td><td>{catBadge(a.category)}</td>
                 <td>{a.location}</td><td>{a.department}</td>
                 <td style={{whiteSpace:"nowrap"}}>{a.purchase_date||"—"}</td>
                 <td style={{textAlign:"right"}}>{a.purchase_price!=null?"¥"+Number(a.purchase_price).toLocaleString():"—"}</td>
                 <td>{maintBadge(a.maintenance_status)}</td>
+                <td>{(()=>{const s=a.operating_status||"稼働中";return<span className={"badge "+(s==="稼働中"?"badge-active":s==="休眠"?"badge-dormant":"badge-disposed")}>{s}</span>;})()}</td>
                 <td>{a.manager||"—"}</td>
                 <td><div style={{display:"flex",gap:4}}><button className="btn btn-ghost btn-sm" style={{padding:6}} onClick={()=>{setEditA(a);setShowForm(true);}}><IC.Edit/></button><button className="btn btn-ghost btn-sm" style={{padding:6,color:"var(--danger)"}} onClick={()=>setConfirmDel(a)}><IC.Trash/></button></div></td>
             </tr>)}</tbody></table></div>

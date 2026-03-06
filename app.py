@@ -26,7 +26,6 @@ except PermissionError:
     os.makedirs(DATA_DIR, exist_ok=True)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DATA_DIR}/assets.db"
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"connect_args": {"timeout": 30}}
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "change-me-in-production")
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=8)
@@ -45,8 +44,6 @@ CATEGORY_PREFIX = {
     "medical":        "A1",
     "medical_supply": "B1",
     "electronic":     "C1",
-    "software":       "D1",
-    "equipment":      "E1",
     "intangible":     "N1",
     "other":          "Z1",
 }
@@ -55,8 +52,6 @@ CATEGORY_LABELS = {
     "medical":        "医療機器",
     "medical_supply": "医療資材",
     "electronic":     "電子機器",
-    "software":       "ソフトウェア",
-    "equipment":      "器具備品",
     "intangible":     "非実在資産",
     "other":          "その他",
 }
@@ -112,6 +107,7 @@ class Asset(db.Model):
     purchase_price = db.Column(db.Integer, nullable=True)
     purchase_date = db.Column(db.String(20), nullable=True)
     maintenance_status = db.Column(db.String(10), default="無")  # 有 / 無 / 不明
+    operating_status = db.Column(db.String(10), default="稼働中")  # 稼働中 / 休眠 / 廃棄済
     maintenance_info = db.Column(db.Text, nullable=True)
     maintenance_link = db.Column(db.String(500), nullable=True)
     depreciation_period_months = db.Column(db.Integer, nullable=True)
@@ -141,6 +137,7 @@ class Asset(db.Model):
             "purchase_price": self.purchase_price,
             "purchase_date": self.purchase_date,
             "maintenance_status": self.maintenance_status or "無",
+            "operating_status": self.operating_status or "稼働中",
             "maintenance_info": self.maintenance_info,
             "maintenance_link": self.maintenance_link,
             "depreciation_period_months": self.depreciation_period_months,
@@ -383,6 +380,9 @@ def list_assets():
         q = q.filter(Asset.purchase_date >= date_from)
     if date_to:
         q = q.filter(Asset.purchase_date <= date_to)
+    op_status = request.args.getlist("operating_status")
+    if op_status:
+        q = q.filter(Asset.operating_status.in_(op_status))
 
     # Sort
     sort = request.args.get("sort", "updated_at")
@@ -457,6 +457,7 @@ def create_asset():
         purchase_price=data.get("purchase_price"),
         purchase_date=data.get("purchase_date"),
         maintenance_status=maint,
+        operating_status=data.get("operating_status", "稼働中"),
         maintenance_info=data.get("maintenance_info"),
         maintenance_link=data.get("maintenance_link"),
         depreciation_period_months=data.get("depreciation_period_months"),
@@ -502,6 +503,7 @@ def update_asset(asset_id):
         "location", "location_other", "department", "department_other",
         "purchase_from", "purchase_price", "purchase_date",
         "maintenance_status", "maintenance_info", "maintenance_link",
+        "operating_status",
         "depreciation_period_months", "lease_period_months",
         "manager", "notes",
     ]
@@ -543,6 +545,7 @@ EXCEL_HEADERS = [
     ("購入金額", "purchase_price"),
     ("購入日", "purchase_date"),
     ("保守", "_maintenance_display"),
+    ("稼働状況", "operating_status"),
     ("保守情報", "maintenance_info"),
     ("保守リンク", "maintenance_link"),
     ("減価償却期間(月)", "depreciation_period_months"),
@@ -742,6 +745,7 @@ def upload_assets():
                 purchase_price=parse_int(row.get("購入金額")),
                 purchase_date=(row.get("購入日") or "").strip() or None,
                 maintenance_status=maint,
+                operating_status="稼働中",
                 maintenance_info=(row.get("保守情報") or "").strip() or None,
                 maintenance_link=(row.get("保守リンク") or "").strip() or None,
                 depreciation_period_months=parse_int(row.get("減価償却期間(月)")),
@@ -978,82 +982,33 @@ def serve_frontend():
 # Startup
 # ---------------------------------------------------------------------------
 
-_db_path = f"{DATA_DIR}/assets.db"
+with app.app_context():
+    db.create_all()
 
-# --- All migration via raw sqlite3 (single connection, no conflict) ---
-import sqlite3 as _sqlite3
+    # Migrate existing tables: add missing columns
+    import sqlite3 as _sqlite3
+    _conn = _sqlite3.connect(f"{DATA_DIR}/assets.db")
+    _cur = _conn.cursor()
 
-_conn = _sqlite3.connect(_db_path, timeout=30)
-_conn.execute("PRAGMA journal_mode=WAL")
-_cur = _conn.cursor()
+    def _add_col(table, column, col_type, default=None):
+        try:
+            _cur.execute(f"SELECT {column} FROM {table} LIMIT 1")
+        except _sqlite3.OperationalError:
+            dc = f" DEFAULT '{default}'" if default is not None else ""
+            _cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}{dc}")
 
-def _add_col(table, column, col_type, default=None):
-    try:
-        _cur.execute(f"SELECT {column} FROM {table} LIMIT 1")
-    except _sqlite3.OperationalError:
-        dc = f" DEFAULT '{default}'" if default is not None else ""
-        _cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}{dc}")
-
-# Check if tables exist before migrating
-_cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
-if _cur.fetchone():
     _add_col("users", "role", "VARCHAR(20)", "admin")
     _add_col("users", "location", "VARCHAR(100)")
     _add_col("assets", "maintenance_status", "VARCHAR(10)", "無")
     _add_col("assets", "is_deleted", "BOOLEAN", "0")
     _add_col("assets", "deleted_at", "DATETIME")
     _add_col("assets", "has_maintenance", "BOOLEAN")
+    _add_col("assets", "operating_status", "VARCHAR(10)", "稼働中")
+    _conn.commit()
+    _conn.close()
 
-    # Migrate maintenance
-    _cur.execute("UPDATE assets SET maintenance_status='有' WHERE has_maintenance=1 AND (maintenance_status IS NULL OR maintenance_status='')")
-    _cur.execute("UPDATE assets SET maintenance_status='無' WHERE (has_maintenance=0 OR has_maintenance IS NULL) AND (maintenance_status IS NULL OR maintenance_status='')")
-    _cur.execute("UPDATE assets SET is_deleted=0 WHERE is_deleted IS NULL")
-
-    # Location merge
-    _cur.execute("UPDATE assets SET location='ガーデン院小児耳鼻' WHERE location='有明院'")
-    _cur.execute("UPDATE assets SET location='ガーデン院皮膚' WHERE location='有明ひふか院'")
-
-    # User role
-    _cur.execute("UPDATE users SET role='admin' WHERE role IS NULL OR role=''")
-
-    # Re-number assets if needed
-    import re as _re
-    _cur.execute("SELECT management_code FROM assets LIMIT 1")
-    _sample = _cur.fetchone()
-    if _sample and not _re.match(r'^[A-Z]\d-\d{5}$', _sample[0] or ""):
-        for _cat, _prefix in [("medical","A1"),("medical_supply","B1"),("electronic","C1"),("software","D1"),("equipment","E1"),("intangible","N1"),("other","Z1")]:
-            _cur.execute("SELECT id, management_code, notes FROM assets WHERE category=? ORDER BY id", (_cat,))
-            _rows = _cur.fetchall()
-            for _idx, (_id, _old_code, _old_notes) in enumerate(_rows, start=1):
-                _new_code = f"{_prefix}-{_idx:05d}"
-                _note = _old_notes or ""
-                if _old_code and _old_code != _new_code and _old_code not in _note:
-                    _note = f"旧管理番号: {_old_code} / {_note}" if _note else f"旧管理番号: {_old_code}"
-                _cur.execute("UPDATE assets SET management_code=?, notes=? WHERE id=?", (_new_code, _note, _id))
-
-    # Remove merged locations
-    _cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='locations'")
-    if _cur.fetchone():
-        _cur.execute("DELETE FROM locations WHERE name IN ('有明院','有明ひふか院')")
-
-_conn.commit()
-_conn.close()
-
-# --- Now SQLAlchemy can safely use the DB ---
-with app.app_context():
-    db.create_all()
-    # Seed only (no more migrate_data needed)
-    if User.query.count() == 0:
-        admin = User(username="admin", display_name="管理者", role="admin", location=None)
-        admin.set_password("admin")
-        db.session.add(admin)
-    if Department.query.count() == 0:
-        for name in DEFAULT_DEPARTMENTS:
-            db.session.add(Department(name=name, is_default=True))
-    if Location.query.count() == 0:
-        for name in DEFAULT_LOCATIONS:
-            db.session.add(Location(name=name, is_default=True))
-    db.session.commit()
+    seed_data()
+    migrate_data()
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
