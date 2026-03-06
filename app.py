@@ -108,6 +108,7 @@ class Asset(db.Model):
     purchase_date = db.Column(db.String(20), nullable=True)
     maintenance_status = db.Column(db.String(10), default="無")  # 有 / 無 / 不明
     operating_status = db.Column(db.String(10), default="稼働中")  # 稼働中 / 休眠 / 廃棄済
+    disposed_date = db.Column(db.String(20), nullable=True)  # 廃棄年月日
     maintenance_info = db.Column(db.Text, nullable=True)
     maintenance_link = db.Column(db.String(500), nullable=True)
     depreciation_period_months = db.Column(db.Integer, nullable=True)
@@ -138,6 +139,7 @@ class Asset(db.Model):
             "purchase_date": self.purchase_date,
             "maintenance_status": self.maintenance_status or "無",
             "operating_status": self.operating_status or "稼働中",
+            "disposed_date": self.disposed_date,
             "maintenance_info": self.maintenance_info,
             "maintenance_link": self.maintenance_link,
             "depreciation_period_months": self.depreciation_period_months,
@@ -444,6 +446,10 @@ def create_asset():
     if maint not in MAINTENANCE_VALUES:
         maint = "無"
 
+    op_st = data.get("operating_status", "稼働中")
+    if op_st == "廃棄済" and not data.get("disposed_date"):
+        return jsonify({"error": "稼働状況が「廃棄済」の場合は廃棄年月日を入力してください"}), 400
+
     asset = Asset(
         management_code=code,
         name=data["name"],
@@ -457,7 +463,8 @@ def create_asset():
         purchase_price=data.get("purchase_price"),
         purchase_date=data.get("purchase_date"),
         maintenance_status=maint,
-        operating_status=data.get("operating_status", "稼働中"),
+        operating_status=op_st,
+        disposed_date=data.get("disposed_date"),
         maintenance_info=data.get("maintenance_info"),
         maintenance_link=data.get("maintenance_link"),
         depreciation_period_months=data.get("depreciation_period_months"),
@@ -498,12 +505,17 @@ def update_asset(asset_id):
     if new_loc != asset.location and not check_location_permission(user, new_loc):
         return jsonify({"error": "移動先の設置場所への権限がありません"}), 403
 
+    # Validate disposed_date
+    new_op = data.get("operating_status", asset.operating_status)
+    if new_op == "廃棄済" and not (data.get("disposed_date") or asset.disposed_date):
+        return jsonify({"error": "稼働状況が「廃棄済」の場合は廃棄年月日を入力してください"}), 400
+
     updatable = [
         "name", "category", "category_other",
         "location", "location_other", "department", "department_other",
         "purchase_from", "purchase_price", "purchase_date",
         "maintenance_status", "maintenance_info", "maintenance_link",
-        "operating_status",
+        "operating_status", "disposed_date",
         "depreciation_period_months", "lease_period_months",
         "manager", "notes",
     ]
@@ -546,6 +558,7 @@ EXCEL_HEADERS = [
     ("購入日", "purchase_date"),
     ("保守", "_maintenance_display"),
     ("稼働状況", "operating_status"),
+    ("廃棄年月日", "disposed_date"),
     ("保守情報", "maintenance_info"),
     ("保守リンク", "maintenance_link"),
     ("減価償却期間(月)", "depreciation_period_months"),
@@ -1004,6 +1017,7 @@ with app.app_context():
     _add_col("assets", "deleted_at", "DATETIME")
     _add_col("assets", "has_maintenance", "BOOLEAN")
     _add_col("assets", "operating_status", "VARCHAR(10)", "稼働中")
+    _add_col("assets", "disposed_date", "VARCHAR(20)")
     _conn.commit()
     _conn.close()
 
