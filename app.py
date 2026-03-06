@@ -974,34 +974,82 @@ def serve_frontend():
 # Startup
 # ---------------------------------------------------------------------------
 
-# --- Step 1: raw SQLite migration (before SQLAlchemy touches the DB) ---
-import sqlite3 as _sqlite3
 _db_path = f"{DATA_DIR}/assets.db"
-if os.path.exists(_db_path):
-    _conn = _sqlite3.connect(_db_path)
-    _cur = _conn.cursor()
 
-    def _add_col(table, column, col_type, default=None):
-        try:
-            _cur.execute(f"SELECT {column} FROM {table} LIMIT 1")
-        except _sqlite3.OperationalError:
-            dc = f" DEFAULT '{default}'" if default is not None else ""
-            _cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}{dc}")
+# --- All migration via raw sqlite3 (single connection, no conflict) ---
+import sqlite3 as _sqlite3
 
+_conn = _sqlite3.connect(_db_path, timeout=30)
+_conn.execute("PRAGMA journal_mode=WAL")
+_cur = _conn.cursor()
+
+def _add_col(table, column, col_type, default=None):
+    try:
+        _cur.execute(f"SELECT {column} FROM {table} LIMIT 1")
+    except _sqlite3.OperationalError:
+        dc = f" DEFAULT '{default}'" if default is not None else ""
+        _cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}{dc}")
+
+# Check if tables exist before migrating
+_cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+if _cur.fetchone():
     _add_col("users", "role", "VARCHAR(20)", "admin")
     _add_col("users", "location", "VARCHAR(100)")
     _add_col("assets", "maintenance_status", "VARCHAR(10)", "無")
     _add_col("assets", "is_deleted", "BOOLEAN", "0")
     _add_col("assets", "deleted_at", "DATETIME")
     _add_col("assets", "has_maintenance", "BOOLEAN")
-    _conn.commit()
-    _conn.close()
 
-# --- Step 2: SQLAlchemy init ---
+    # Migrate maintenance
+    _cur.execute("UPDATE assets SET maintenance_status='有' WHERE has_maintenance=1 AND (maintenance_status IS NULL OR maintenance_status='')")
+    _cur.execute("UPDATE assets SET maintenance_status='無' WHERE (has_maintenance=0 OR has_maintenance IS NULL) AND (maintenance_status IS NULL OR maintenance_status='')")
+    _cur.execute("UPDATE assets SET is_deleted=0 WHERE is_deleted IS NULL")
+
+    # Location merge
+    _cur.execute("UPDATE assets SET location='ガーデン院小児耳鼻' WHERE location='有明院'")
+    _cur.execute("UPDATE assets SET location='ガーデン院皮膚' WHERE location='有明ひふか院'")
+
+    # User role
+    _cur.execute("UPDATE users SET role='admin' WHERE role IS NULL OR role=''")
+
+    # Re-number assets if needed
+    import re as _re
+    _cur.execute("SELECT management_code FROM assets LIMIT 1")
+    _sample = _cur.fetchone()
+    if _sample and not _re.match(r'^[A-Z]\d-\d{5}$', _sample[0] or ""):
+        for _cat, _prefix in [("medical","A1"),("medical_supply","B1"),("electronic","C1"),("intangible","N1"),("other","Z1")]:
+            _cur.execute("SELECT id, management_code, notes FROM assets WHERE category=? ORDER BY id", (_cat,))
+            _rows = _cur.fetchall()
+            for _idx, (_id, _old_code, _old_notes) in enumerate(_rows, start=1):
+                _new_code = f"{_prefix}-{_idx:05d}"
+                _note = _old_notes or ""
+                if _old_code and _old_code != _new_code and _old_code not in _note:
+                    _note = f"旧管理番号: {_old_code} / {_note}" if _note else f"旧管理番号: {_old_code}"
+                _cur.execute("UPDATE assets SET management_code=?, notes=? WHERE id=?", (_new_code, _note, _id))
+
+    # Remove merged locations
+    _cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='locations'")
+    if _cur.fetchone():
+        _cur.execute("DELETE FROM locations WHERE name IN ('有明院','有明ひふか院')")
+
+_conn.commit()
+_conn.close()
+
+# --- Now SQLAlchemy can safely use the DB ---
 with app.app_context():
     db.create_all()
-    seed_data()
-    migrate_data()
+    # Seed only (no more migrate_data needed)
+    if User.query.count() == 0:
+        admin = User(username="admin", display_name="管理者", role="admin", location=None)
+        admin.set_password("admin")
+        db.session.add(admin)
+    if Department.query.count() == 0:
+        for name in DEFAULT_DEPARTMENTS:
+            db.session.add(Department(name=name, is_default=True))
+    if Location.query.count() == 0:
+        for name in DEFAULT_LOCATIONS:
+            db.session.add(Location(name=name, is_default=True))
+    db.session.commit()
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
