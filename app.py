@@ -930,6 +930,27 @@ def serve_frontend():
 
 with app.app_context():
     db.create_all()
+
+    # Migrate existing tables: add missing columns
+    import sqlite3
+    conn = sqlite3.connect(f"{DATA_DIR}/assets.db")
+    cursor = conn.cursor()
+
+    def add_column_if_not_exists(table, column, col_type, default=None):
+        try:
+            cursor.execute(f"SELECT {column} FROM {table} LIMIT 1")
+        except sqlite3.OperationalError:
+            default_clause = f" DEFAULT '{default}'" if default is not None else ""
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}{default_clause}")
+
+    add_column_if_not_exists("users", "role", "VARCHAR(20)", "admin")
+    add_column_if_not_exists("users", "location", "VARCHAR(100)")
+    add_column_if_not_exists("assets", "maintenance_status", "VARCHAR(10)", "無")
+    add_column_if_not_exists("assets", "is_deleted", "BOOLEAN", "0")
+    add_column_if_not_exists("assets", "deleted_at", "DATETIME")
+    conn.commit()
+    conn.close()
+
     seed_data()
     migrate_data()
 
