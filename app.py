@@ -45,6 +45,8 @@ CATEGORY_PREFIX = {
     "medical":        "A1",
     "medical_supply": "B1",
     "electronic":     "C1",
+    "software":       "D1",
+    "equipment":      "E1",
     "intangible":     "N1",
     "other":          "Z1",
 }
@@ -53,6 +55,8 @@ CATEGORY_LABELS = {
     "medical":        "医療機器",
     "medical_supply": "医療資材",
     "electronic":     "電子機器",
+    "software":       "ソフトウェア",
+    "equipment":      "器具備品",
     "intangible":     "非実在資産",
     "other":          "その他",
 }
@@ -1017,7 +1021,7 @@ if _cur.fetchone():
     _cur.execute("SELECT management_code FROM assets LIMIT 1")
     _sample = _cur.fetchone()
     if _sample and not _re.match(r'^[A-Z]\d-\d{5}$', _sample[0] or ""):
-        for _cat, _prefix in [("medical","A1"),("medical_supply","B1"),("electronic","C1"),("intangible","N1"),("other","Z1")]:
+        for _cat, _prefix in [("medical","A1"),("medical_supply","B1"),("electronic","C1"),("software","D1"),("equipment","E1"),("intangible","N1"),("other","Z1")]:
             _cur.execute("SELECT id, management_code, notes FROM assets WHERE category=? ORDER BY id", (_cat,))
             _rows = _cur.fetchall()
             for _idx, (_id, _old_code, _old_notes) in enumerate(_rows, start=1):

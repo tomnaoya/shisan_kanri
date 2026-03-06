@@ -118,8 +118,8 @@ tbody tr{transition:background var(--transition)}tbody tr:hover{background:#F8F9
 <script type="text/babel">
 const{useState,useEffect,useCallback,useRef,createContext,useContext}=React;
 const API_BASE="";
-const CATEGORIES=[{value:"medical",label:"医療機器"},{value:"medical_supply",label:"医療資材"},{value:"electronic",label:"電子機器"},{value:"intangible",label:"非実在資産"},{value:"other",label:"その他"}];
-const CATEGORY_MAP={medical:"医療機器",medical_supply:"医療資材",electronic:"電子機器",intangible:"非実在資産",other:"その他"};
+const CATEGORIES=[{value:"medical",label:"医療機器"},{value:"medical_supply",label:"医療資材"},{value:"electronic",label:"電子機器"},{value:"software",label:"ソフトウェア"},{value:"equipment",label:"器具備品"},{value:"intangible",label:"非実在資産"},{value:"other",label:"その他"}];
+const CATEGORY_MAP={medical:"医療機器",medical_supply:"医療資材",electronic:"電子機器",software:"ソフトウェア",equipment:"器具備品",intangible:"非実在資産",other:"その他"};
 const MAINT_OPTIONS=["有","無","不明"];
 
 let authToken=null;
@@ -384,7 +384,7 @@ function AssetsPage({user}){
     async function handleDel(){if(!confirmDel)return;await apiFetch("/assets/"+confirmDel.id,{method:"DELETE"});toast("削除しました");setConfirmDel(null);load(page);}
     async function handleDL(fmt){try{const token=getToken();const r=await fetch(API_BASE+"/api/assets/download?format="+fmt,{headers:{"Authorization":"Bearer "+token}});const b=await r.blob();const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="assets."+fmt;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);toast(fmt.toUpperCase()+" DL完了");}catch{toast("失敗","error");}}
 
-    function catBadge(c){const cls={medical:"badge-medical",medical_supply:"badge-supply",electronic:"badge-electronic",intangible:"badge-intangible"}[c]||"badge-other";return<span className={"badge "+cls}>{CATEGORY_MAP[c]||c}</span>;}
+    function catBadge(c){const cls={medical:"badge-medical",medical_supply:"badge-supply",electronic:"badge-electronic",software:"badge-supply",equipment:"badge-electronic",intangible:"badge-intangible"}[c]||"badge-other";return<span className={"badge "+cls}>{CATEGORY_MAP[c]||c}</span>;}
     function maintBadge(s){return<span className={"badge "+(s==="有"?"badge-yes":s==="不明"?"badge-unknown":"badge-no")}>{s||"無"}</span>;}
 
     return(<div>
