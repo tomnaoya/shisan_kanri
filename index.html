@@ -215,16 +215,17 @@ function DeptTab(){
 }
 
 function LocationTab(){
-    const[locs,setLocs]=useState([]);const[nl,setNl]=useState("");const[ld,setLd]=useState(true);const toast=useToast();
+    const[locs,setLocs]=useState([]);const[nl,setNl]=useState("");const[ld,setLd]=useState(true);const[editId,setEditId]=useState(null);const[editName,setEditName]=useState("");const toast=useToast();
     useEffect(()=>{load();},[]);
     async function load(){setLd(true);try{const r=await apiFetch("/locations");setLocs(await r.json());}catch{}setLd(false);}
     async function add(){if(!nl.trim())return;const r=await apiFetch("/locations",{method:"POST",body:JSON.stringify({name:nl.trim()})});if(r.ok){setNl("");toast("追加しました");load();}else{const d=await r.json();toast(d.error,"error");}}
-    async function del(id){await apiFetch("/locations/"+id,{method:"DELETE"});toast("削除しました");load();}
+    async function del(id){if(!confirm("この設置場所を削除しますか？"))return;await apiFetch("/locations/"+id,{method:"DELETE"});toast("削除しました");load();}
+    async function save(id){if(!editName.trim())return;const r=await apiFetch("/locations/"+id,{method:"PUT",body:JSON.stringify({name:editName.trim()})});if(r.ok){setEditId(null);toast("更新しました");load();}else{const d=await r.json();toast(d.error,"error");}}
     return(<div>
         <div style={{display:"flex",gap:8,marginBottom:16}}><input className="form-input" value={nl} onChange={e=>setNl(e.target.value)} placeholder="新しい設置場所名" onKeyDown={e=>e.key==="Enter"&&add()}/><button className="btn btn-primary btn-sm" onClick={add}>追加</button></div>
         {ld?<div className="loading-center"><span className="spinner"/></div>:<div style={{maxHeight:300,overflowY:"auto"}}>{locs.map(l=>(<div key={l.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)"}}>
-            <span style={{fontSize:14}}>{l.name}</span>
-            <button className="btn btn-ghost btn-sm" style={{color:"var(--danger)",padding:4}} onClick={()=>del(l.id)}><IC.Trash/></button>
+            {editId===l.id?<><input className="form-input" style={{flex:1,marginRight:8}} value={editName} onChange={e=>setEditName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&save(l.id)} autoFocus/><button className="btn btn-primary btn-sm" onClick={()=>save(l.id)}>保存</button><button className="btn btn-secondary btn-sm" style={{marginLeft:4}} onClick={()=>setEditId(null)}>取消</button></>
+            :<><span style={{fontSize:14}}>{l.name}</span><div style={{display:"flex",gap:4}}><button className="btn btn-ghost btn-sm" style={{padding:4}} onClick={()=>{setEditId(l.id);setEditName(l.name);}}><IC.Edit/></button><button className="btn btn-ghost btn-sm" style={{color:"var(--danger)",padding:4}} onClick={()=>del(l.id)}><IC.Trash/></button></div></>}
         </div>))}</div>}
     </div>);
 }
@@ -275,9 +276,15 @@ function AssetFormModal({asset,onClose,onSaved}){
     const isE=!!asset;const toast=useToast();const[depts,setDepts]=useState([]);const[locs,setLocs]=useState([]);
     const[f,setF]=useState({name:"",category:"medical",category_other:"",location:"",location_other:"",department:"",department_other:"",purchase_from:"",purchase_price:"",purchase_date:"",maintenance_status:"無",operating_status:"稼働中",disposed_date:"",maintenance_info:"",maintenance_link:"",depreciation_period_months:"",lease_period_months:"",manager:"",notes:"",...(asset||{})});
     const[nextCode,setNextCode]=useState(asset?asset.management_code:"...");
+    const[catChanged,setCatChanged]=useState(false);
     const[err,setErr]=useState("");const[ld,setLd]=useState(false);
     useEffect(()=>{apiFetch("/departments").then(r=>r.json()).then(setDepts).catch(()=>{});apiFetch("/locations").then(r=>r.json()).then(setLocs).catch(()=>{});},[]);
-    useEffect(()=>{if(!isE){apiFetch("/assets/next-code/"+f.category).then(r=>r.json()).then(d=>setNextCode(d.code)).catch(()=>{});}},[f.category,isE]);
+    useEffect(()=>{
+        const changed=isE&&f.category!==asset.category;
+        setCatChanged(changed);
+        if(!isE||changed){apiFetch("/assets/next-code/"+f.category).then(r=>r.json()).then(d=>setNextCode(d.code)).catch(()=>{});}
+        else{setNextCode(asset.management_code);}
+    },[f.category]);
     function s(k){return e=>setF(p=>({...p,[k]:e.target.value}));}
     async function sub(e){e.preventDefault();setLd(true);setErr("");
         const body={...f};body.purchase_price=body.purchase_price!==""&&body.purchase_price!=null?Number(body.purchase_price):null;
@@ -291,7 +298,7 @@ function AssetFormModal({asset,onClose,onSaved}){
         <div className="modal-header"><h2>{isE?"資産編集":"新規資産登録"}</h2><button className="modal-close" onClick={onClose}><IC.X/></button></div>
         <form onSubmit={sub}><div className="modal-body">
             {err&&<div className="alert alert-error">{err}</div>}
-            <div className="form-row"><div className="form-group"><label>管理番号（自動採番）</label><input className="form-input" value={isE?asset.management_code:nextCode} disabled style={{fontWeight:600,color:"var(--accent)"}}/></div><div className="form-group"><label>資産名<span className="req">*必須</span></label><input className="form-input" value={f.name} onChange={s("name")} required/></div></div>
+            <div className="form-row"><div className="form-group"><label>管理番号（自動採番）{catChanged&&<span style={{fontSize:11,color:"var(--danger)",marginLeft:8}}>※種別変更により再採番されます</span>}</label><input className="form-input" value={nextCode} disabled style={{fontWeight:600,color:catChanged?"var(--danger)":"var(--accent)"}}/></div><div className="form-group"><label>資産名<span className="req">*必須</span></label><input className="form-input" value={f.name} onChange={s("name")} required/></div></div>
             <div className="form-row"><div className="form-group"><label>種別<span className="req">*必須</span></label><select className="form-input" value={f.category} onChange={s("category")}>{CATEGORIES.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select></div>{f.category==="other"&&<div className="form-group"><label>種別(その他)<span className="req">*</span></label><input className="form-input" value={f.category_other} onChange={s("category_other")} required/></div>}</div>
             <div className="form-row"><div className="form-group"><label>設置場所<span className="req">*必須</span></label><select className="form-input" value={f.location} onChange={s("location")} required>{!f.location&&<option value="">選択してください</option>}{locs.map(l=><option key={l.id} value={l.name}>{l.name}</option>)}<option value="その他">その他</option></select></div>{f.location==="その他"&&<div className="form-group"><label>設置場所(その他)<span className="req">*</span></label><input className="form-input" value={f.location_other} onChange={s("location_other")} required/></div>}</div>
             <div className="form-row"><div className="form-group"><label>設置部室</label><select className="form-input" value={f.department} onChange={s("department")}><option value="">選択してください</option>{depts.map(d=><option key={d.id} value={d.name}>{d.name}</option>)}</select></div>{f.department==="その他"&&<div className="form-group"><label>設置部室(その他)</label><input className="form-input" value={f.department_other} onChange={s("department_other")}/></div>}</div>
@@ -393,6 +400,7 @@ function AssetsPage({user}){
 
     function catBadge(c){const cls={medical:"badge-medical",medical_supply:"badge-supply",electronic:"badge-electronic",intangible:"badge-intangible"}[c]||"badge-other";return<span className={"badge "+cls}>{CATEGORY_MAP[c]||c}</span>;}
     function maintBadge(s){return<span className={"badge "+(s==="有"?"badge-yes":s==="不明"?"badge-unknown":"badge-no")}>{s||"無"}</span>;}
+    function canEdit(a){return user.role==="admin"||user.location==="サポートチーム"||user.location===a.location;}
 
     return(<div>
         <div className="page-header"><h1>資産一覧</h1><div className="page-header-actions">
@@ -421,7 +429,7 @@ function AssetsPage({user}){
                 <td>{maintBadge(a.maintenance_status)}</td>
                 <td>{(()=>{const s=a.operating_status||"稼働中";return<span className={"badge "+(s==="稼働中"?"badge-active":s==="休眠"?"badge-dormant":"badge-disposed")}>{s}</span>;})()}</td>
                 <td>{a.manager||"—"}</td>
-                <td><div style={{display:"flex",gap:4}}><button className="btn btn-ghost btn-sm" style={{padding:6}} onClick={()=>{setEditA(a);setShowForm(true);}}><IC.Edit/></button><button className="btn btn-ghost btn-sm" style={{padding:6,color:"var(--danger)"}} onClick={()=>setConfirmDel(a)}><IC.Trash/></button></div></td>
+                <td>{canEdit(a)?<div style={{display:"flex",gap:4}}><button className="btn btn-ghost btn-sm" style={{padding:6}} onClick={()=>{setEditA(a);setShowForm(true);}}><IC.Edit/></button><button className="btn btn-ghost btn-sm" style={{padding:6,color:"var(--danger)"}} onClick={()=>setConfirmDel(a)}><IC.Trash/></button></div>:<span style={{fontSize:12,color:"var(--text-secondary)"}}>閲覧のみ</span>}</td>
             </tr>)}</tbody></table></div>
             <div className="pagination"><span>{total}件中 {Math.min((page-1)*50+1,total)}〜{Math.min(page*50,total)}件</span>
                 <div className="pagination-btns"><button disabled={page<=1} onClick={()=>load(page-1)}>‹</button>

@@ -353,9 +353,7 @@ def list_assets():
     user = get_current_user()
     q = Asset.query.filter_by(is_deleted=False)
 
-    # Location permission
-    if user.role != "admin" and user.location != "サポートチーム":
-        q = q.filter(Asset.location == user.location)
+    # All users can view all assets (edit permission checked separately)
 
     # Filters
     category = request.args.get("category")
@@ -499,7 +497,18 @@ def update_asset(asset_id):
 
     data = request.get_json(silent=True) or {}
 
-    # If category changed, we do NOT change management_code (already assigned)
+    # If category changed, re-generate management_code
+    new_cat = data.get("category", asset.category)
+    if new_cat != asset.category:
+        old_code = asset.management_code
+        new_code = generate_management_code(new_cat)
+        asset.management_code = new_code
+        # Record old code in notes
+        old_note = asset.notes or ""
+        if old_code and old_code not in old_note:
+            prefix_note = f"旧管理番号: {old_code}"
+            asset.notes = f"{prefix_note} / {old_note}" if old_note else prefix_note
+
     # Validate location change permission
     new_loc = data.get("location", asset.location)
     if new_loc != asset.location and not check_location_permission(user, new_loc):
@@ -961,8 +970,7 @@ def stats():
     user = get_current_user()
     q = Asset.query.filter_by(is_deleted=False)
 
-    if user.role != "admin" and user.location != "サポートチーム":
-        q = q.filter(Asset.location == user.location)
+    # All users can view all stats
 
     total = q.count()
     by_category = q.with_entities(Asset.category, db.func.count(Asset.id)).group_by(Asset.category).all()
