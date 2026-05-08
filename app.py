@@ -44,6 +44,8 @@ CATEGORY_PREFIX = {
     "medical":        "A1",
     "medical_supply": "B1",
     "electronic":     "C1",
+    "software":       "D1",
+    "equipment":      "E1",
     "intangible":     "N1",
     "other":          "Z1",
 }
@@ -52,6 +54,8 @@ CATEGORY_LABELS = {
     "medical":        "医療機器",
     "medical_supply": "医療資材",
     "electronic":     "電子機器",
+    "software":       "ソフトウェア",
+    "equipment":      "器具備品",
     "intangible":     "非実在資産",
     "other":          "その他",
 }
