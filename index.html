@@ -276,15 +276,14 @@ function AssetFormModal({asset,onClose,onSaved}){
     const isE=!!asset;const toast=useToast();const[depts,setDepts]=useState([]);const[locs,setLocs]=useState([]);
     const[f,setF]=useState({name:"",category:"medical",category_other:"",location:"",location_other:"",department:"",department_other:"",purchase_from:"",purchase_price:"",purchase_date:"",maintenance_status:"無",operating_status:"稼働中",disposed_date:"",maintenance_info:"",maintenance_link:"",depreciation_period_months:"",lease_period_months:"",manager:"",notes:"",...(asset||{})});
     const[nextCode,setNextCode]=useState(asset?asset.management_code:"...");
-    const[catChanged,setCatChanged]=useState(false);
     const[err,setErr]=useState("");const[ld,setLd]=useState(false);
     useEffect(()=>{apiFetch("/departments").then(r=>r.json()).then(setDepts).catch(()=>{});apiFetch("/locations").then(r=>r.json()).then(setLocs).catch(()=>{});},[]);
     useEffect(()=>{
-        const changed=isE&&f.category!==asset.category;
-        setCatChanged(changed);
-        if(!isE||changed){apiFetch("/assets/next-code/"+f.category).then(r=>r.json()).then(d=>setNextCode(d.code)).catch(()=>{});}
-        else{setNextCode(asset.management_code);}
-    },[f.category]);
+        // 編集時は管理番号不変
+        if(isE){setNextCode(asset.management_code);return;}
+        if(!f.category||!f.location){setNextCode("...");return;}
+        apiFetch("/assets/next-code/"+f.category+"?location="+encodeURIComponent(f.location)).then(r=>r.json()).then(d=>setNextCode(d.code)).catch(()=>{});
+    },[f.category,f.location,isE]);
     function s(k){return e=>setF(p=>({...p,[k]:e.target.value}));}
     async function sub(e){e.preventDefault();setLd(true);setErr("");
         const body={...f};body.purchase_price=body.purchase_price!==""&&body.purchase_price!=null?Number(body.purchase_price):null;
@@ -298,7 +297,7 @@ function AssetFormModal({asset,onClose,onSaved}){
         <div className="modal-header"><h2>{isE?"資産編集":"新規資産登録"}</h2><button className="modal-close" onClick={onClose}><IC.X/></button></div>
         <form onSubmit={sub}><div className="modal-body">
             {err&&<div className="alert alert-error">{err}</div>}
-            <div className="form-row"><div className="form-group"><label>管理番号（自動採番）{catChanged&&<span style={{fontSize:11,color:"var(--danger)",marginLeft:8}}>※種別変更により再採番されます</span>}</label><input className="form-input" value={nextCode} disabled style={{fontWeight:600,color:catChanged?"var(--danger)":"var(--accent)"}}/></div><div className="form-group"><label>資産名<span className="req">*必須</span></label><input className="form-input" value={f.name} onChange={s("name")} required/></div></div>
+            <div className="form-row"><div className="form-group"><label>管理番号（自動採番・登録後変更不可）</label><input className="form-input" value={nextCode} disabled style={{fontWeight:600,color:"var(--accent)"}}/></div><div className="form-group"><label>資産名<span className="req">*必須</span></label><input className="form-input" value={f.name} onChange={s("name")} required/></div></div>
             <div className="form-row"><div className="form-group"><label>種別<span className="req">*必須</span></label><select className="form-input" value={f.category} onChange={s("category")}>{CATEGORIES.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select></div>{f.category==="other"&&<div className="form-group"><label>種別(その他)<span className="req">*</span></label><input className="form-input" value={f.category_other} onChange={s("category_other")} required/></div>}</div>
             <div className="form-row"><div className="form-group"><label>設置場所<span className="req">*必須</span></label><select className="form-input" value={f.location} onChange={s("location")} required>{!f.location&&<option value="">選択してください</option>}{locs.map(l=><option key={l.id} value={l.name}>{l.name}</option>)}<option value="その他">その他</option></select></div>{f.location==="その他"&&<div className="form-group"><label>設置場所(その他)<span className="req">*</span></label><input className="form-input" value={f.location_other} onChange={s("location_other")} required/></div>}</div>
             <div className="form-row"><div className="form-group"><label>設置部室</label><select className="form-input" value={f.department} onChange={s("department")}><option value="">選択してください</option>{depts.map(d=><option key={d.id} value={d.name}>{d.name}</option>)}</select></div>{f.department==="その他"&&<div className="form-group"><label>設置部室(その他)</label><input className="form-input" value={f.department_other} onChange={s("department_other")}/></div>}</div>

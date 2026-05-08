@@ -39,15 +39,25 @@ CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=False)
 # Constants
 # ---------------------------------------------------------------------------
 
-# Category prefix mapping for auto-numbering
-CATEGORY_PREFIX = {
-    "medical":        "A1",
-    "medical_supply": "B1",
-    "electronic":     "C1",
-    "software":       "D1",
-    "equipment":      "E1",
-    "intangible":     "N1",
-    "other":          "Z1",
+# Management code: <CategoryLetter><LocationDigit>-NNNNN
+CATEGORY_LETTER = {
+    "medical":        "A",
+    "medical_supply": "B",
+    "electronic":     "C",
+    "software":       "D",
+    "equipment":      "E",
+    "intangible":     "N",
+    "other":          "Z",
+}
+
+LOCATION_DIGIT = {
+    "豊洲院":              "1",
+    "勝どき院":            "2",
+    "田町芝浦院":          "3",
+    "ガーデン院小児耳鼻":  "4",
+    "ガーデン院皮膚":      "5",
+    "柏院":                "6",
+    "サポートチーム":      "0",
 }
 
 CATEGORY_LABELS = {
@@ -182,10 +192,15 @@ class Location(db.Model):
 # Auto-numbering
 # ---------------------------------------------------------------------------
 
-def generate_management_code(category):
-    """Generate next management_code for given category."""
-    prefix = CATEGORY_PREFIX.get(category, "Z1")
-    # Find max existing code with this prefix (including deleted)
+def generate_management_code(category, location):
+    """Generate next management_code for (category, location).
+
+    Format: <CategoryLetter><LocationDigit>-NNNNN
+    Unknown category -> Z, unknown location -> 0.
+    """
+    letter = CATEGORY_LETTER.get(category, "Z")
+    digit = LOCATION_DIGIT.get(location, "0")
+    prefix = f"{letter}{digit}"
     like_pattern = f"{prefix}-%"
     last = (
         Asset.query
@@ -266,38 +281,6 @@ def migrate_data():
     # Remove merged locations from Location table
     for old_loc in LOCATION_MERGE:
         Location.query.filter_by(name=old_loc).delete()
-
-    db.session.flush()
-
-    # 4. Re-number all assets if any still have old-format codes (not XX-NNNNN)
-    import re
-    new_format = re.compile(r'^[A-Z]\d-\d{5}$')
-    needs_renumber = Asset.query.filter(
-        ~Asset.management_code.op('REGEXP')(r'^[A-Z]\d-\d{5}$')
-    ).first()
-
-    # SQLite doesn't support REGEXP by default, so check differently
-    sample = Asset.query.first()
-    if sample and not new_format.match(sample.management_code or ""):
-        # Re-number ALL assets grouped by category
-        for cat_key in CATEGORY_PREFIX:
-            prefix = CATEGORY_PREFIX[cat_key]
-            assets = (
-                Asset.query
-                .filter_by(category=cat_key)
-                .order_by(Asset.id)
-                .all()
-            )
-            for idx, asset in enumerate(assets, start=1):
-                old_code = asset.management_code
-                new_code = f"{prefix}-{idx:05d}"
-                # Save old code in notes
-                if old_code and old_code != new_code:
-                    old_note = asset.notes or ""
-                    if old_code not in old_note:
-                        prefix_note = f"旧管理番号: {old_code}"
-                        asset.notes = f"{prefix_note} / {old_note}" if old_note else prefix_note
-                asset.management_code = new_code
 
     db.session.commit()
 
@@ -411,8 +394,9 @@ def list_assets():
 @app.route("/api/assets/next-code/<category>", methods=["GET"])
 @jwt_required()
 def next_code(category):
-    """Preview next management code for a category."""
-    code = generate_management_code(category)
+    """Preview next management code for a (category, location)."""
+    location = request.args.get("location", "")
+    code = generate_management_code(category, location)
     return jsonify({"code": code})
 
 
@@ -441,8 +425,8 @@ def create_asset():
     if not dept:
         dept = "その他"
 
-    # Auto-generate management code
-    code = generate_management_code(data["category"])
+    # Auto-generate management code (category + location)
+    code = generate_management_code(data["category"], loc)
 
     maint = data.get("maintenance_status", "無")
     if maint not in MAINTENANCE_VALUES:
@@ -501,17 +485,7 @@ def update_asset(asset_id):
 
     data = request.get_json(silent=True) or {}
 
-    # If category changed, re-generate management_code
-    new_cat = data.get("category", asset.category)
-    if new_cat != asset.category:
-        old_code = asset.management_code
-        new_code = generate_management_code(new_cat)
-        asset.management_code = new_code
-        # Record old code in notes
-        old_note = asset.notes or ""
-        if old_code and old_code not in old_note:
-            prefix_note = f"旧管理番号: {old_code}"
-            asset.notes = f"{prefix_note} / {old_note}" if old_note else prefix_note
+    # 管理番号は登録後変更しない (種別変更・院移動でも維持)
 
     # Validate location change permission
     new_loc = data.get("location", asset.location)
@@ -746,8 +720,8 @@ def upload_assets():
             else:
                 maint = "無"
 
-            # Auto-generate code
-            code = generate_management_code(category)
+            # Auto-generate code (category + location)
+            code = generate_management_code(category, location)
 
             # Put old management_code (from CSV) into notes
             old_code = (row.get("管理番号") or "").strip()
@@ -1031,6 +1005,60 @@ with app.app_context():
     _add_col("assets", "operating_status", "VARCHAR(10)", "稼働中")
     _add_col("assets", "disposed_date", "VARCHAR(20)")
     _conn.commit()
+
+    # ---- One-shot 再採番 v2: <CategoryLetter><LocationDigit>-NNNNN ----
+    # 多重実行防止: DATA_DIR の .renumber_v2_done フラグで一回限り
+    # 本番稼働後はこのブロックは絶対に走らない (フラグ削除しない限り)
+    _renumber_flag = os.path.join(DATA_DIR, ".renumber_v2_done")
+    if not os.path.exists(_renumber_flag):
+        # 一旦すべて TMP_ 接頭辞でリネームして UNIQUE 制約衝突を回避
+        _cur.execute("UPDATE assets SET management_code = 'TMP_' || management_code WHERE management_code NOT LIKE 'TMP_%'")
+
+        # (category, location) ごとに id 順で 1 から採番
+        for _cat, _letter in [("medical","A"),("medical_supply","B"),("electronic","C"),
+                              ("software","D"),("equipment","E"),("intangible","N"),("other","Z")]:
+            for _loc, _digit in [("豊洲院","1"),("勝どき院","2"),("田町芝浦院","3"),
+                                 ("ガーデン院小児耳鼻","4"),("ガーデン院皮膚","5"),
+                                 ("柏院","6"),("サポートチーム","0")]:
+                _prefix = f"{_letter}{_digit}"
+                _cur.execute(
+                    "SELECT id, management_code, notes FROM assets "
+                    "WHERE category=? AND location=? ORDER BY id",
+                    (_cat, _loc),
+                )
+                _rows = _cur.fetchall()
+                for _idx, (_id, _tmp_code, _old_notes) in enumerate(_rows, start=1):
+                    _new_code = f"{_prefix}-{_idx:05d}"
+                    _real_old = (_tmp_code or "").replace("TMP_", "", 1)
+                    _note = _old_notes or ""
+                    if _real_old and _real_old != _new_code and _real_old not in _note:
+                        _note = f"旧管理番号: {_real_old} / {_note}" if _note else f"旧管理番号: {_real_old}"
+                    _cur.execute("UPDATE assets SET management_code=?, notes=? WHERE id=?",
+                                 (_new_code, _note, _id))
+
+        # 未分類 (location/category がマスタに無い) は Z0- で連番
+        _cur.execute("SELECT management_code FROM assets WHERE management_code LIKE 'Z0-%' "
+                     "ORDER BY management_code DESC LIMIT 1")
+        _max = _cur.fetchone()
+        try:
+            _next_z0 = int(_max[0].split("-")[1]) + 1 if _max else 1
+        except (IndexError, ValueError):
+            _next_z0 = 1
+        _cur.execute("SELECT id, management_code, notes FROM assets WHERE management_code LIKE 'TMP_%'")
+        for _id, _tmp_code, _old_notes in _cur.fetchall():
+            _new_code = f"Z0-{_next_z0:05d}"
+            _next_z0 += 1
+            _real_old = (_tmp_code or "").replace("TMP_", "", 1)
+            _note = _old_notes or ""
+            if _real_old and _real_old != _new_code and _real_old not in _note:
+                _note = f"旧管理番号: {_real_old} / {_note}" if _note else f"旧管理番号: {_real_old}"
+            _cur.execute("UPDATE assets SET management_code=?, notes=? WHERE id=?",
+                         (_new_code, _note, _id))
+
+        _conn.commit()
+        with open(_renumber_flag, "w") as _f:
+            _f.write(datetime.utcnow().isoformat())
+
     _conn.close()
 
     seed_data()
