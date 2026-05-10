@@ -1059,6 +1059,55 @@ with app.app_context():
         with open(_renumber_flag, "w") as _f:
             _f.write(datetime.utcnow().isoformat())
 
+    # ---- One-shot 再採番 v3: 種別変更を反映して全件再採番 ----
+    # v2 と同じロジック。種別をユーザーが更新したため再度走らせる。
+    _renumber_v3_flag = os.path.join(DATA_DIR, ".renumber_v3_done")
+    if not os.path.exists(_renumber_v3_flag):
+        _cur.execute("UPDATE assets SET management_code = 'TMP_' || management_code WHERE management_code NOT LIKE 'TMP_%'")
+
+        for _cat, _letter in [("medical","A"),("medical_supply","B"),("electronic","C"),
+                              ("software","D"),("equipment","E"),("intangible","N"),("other","Z")]:
+            for _loc, _digit in [("豊洲院","1"),("勝どき院","2"),("田町芝浦院","3"),
+                                 ("ガーデン院小児耳鼻","4"),("ガーデン院皮膚","5"),
+                                 ("柏院","6"),("サポートチーム","0")]:
+                _prefix = f"{_letter}{_digit}"
+                _cur.execute(
+                    "SELECT id, management_code, notes FROM assets "
+                    "WHERE category=? AND location=? ORDER BY id",
+                    (_cat, _loc),
+                )
+                _rows = _cur.fetchall()
+                for _idx, (_id, _tmp_code, _old_notes) in enumerate(_rows, start=1):
+                    _new_code = f"{_prefix}-{_idx:05d}"
+                    _real_old = (_tmp_code or "").replace("TMP_", "", 1)
+                    _note = _old_notes or ""
+                    if _real_old and _real_old != _new_code and _real_old not in _note:
+                        _note = f"旧管理番号: {_real_old} / {_note}" if _note else f"旧管理番号: {_real_old}"
+                    _cur.execute("UPDATE assets SET management_code=?, notes=? WHERE id=?",
+                                 (_new_code, _note, _id))
+
+        _cur.execute("SELECT management_code FROM assets WHERE management_code LIKE 'Z0-%' "
+                     "ORDER BY management_code DESC LIMIT 1")
+        _max = _cur.fetchone()
+        try:
+            _next_z0 = int(_max[0].split("-")[1]) + 1 if _max else 1
+        except (IndexError, ValueError):
+            _next_z0 = 1
+        _cur.execute("SELECT id, management_code, notes FROM assets WHERE management_code LIKE 'TMP_%'")
+        for _id, _tmp_code, _old_notes in _cur.fetchall():
+            _new_code = f"Z0-{_next_z0:05d}"
+            _next_z0 += 1
+            _real_old = (_tmp_code or "").replace("TMP_", "", 1)
+            _note = _old_notes or ""
+            if _real_old and _real_old != _new_code and _real_old not in _note:
+                _note = f"旧管理番号: {_real_old} / {_note}" if _note else f"旧管理番号: {_real_old}"
+            _cur.execute("UPDATE assets SET management_code=?, notes=? WHERE id=?",
+                         (_new_code, _note, _id))
+
+        _conn.commit()
+        with open(_renumber_v3_flag, "w") as _f:
+            _f.write(datetime.utcnow().isoformat())
+
     _conn.close()
 
     seed_data()
