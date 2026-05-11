@@ -452,7 +452,7 @@ function App(){
     return(<div className="app-layout">
         <button className="mobile-menu-btn" onClick={()=>setSb(!sb)}><IC.Menu/></button>
         <aside className={"sidebar "+(sb?"open":"")}>
-            <div className="sidebar-brand"><h2>資産管理</h2><span>{user.display_name||user.username}{user.location?" / "+user.location:""}</span></div>
+            <div className="sidebar-brand"><h2>モルゲンロート資産管理</h2><span>{user.display_name||user.username}{user.location?" / "+user.location:""}</span></div>
             <nav className="sidebar-nav">
                 <button className={"sidebar-nav-item "+(pg==="dashboard"?"active":"")} onClick={()=>{setPg("dashboard");setSb(false);}}><IC.Dashboard/>ダッシュボード</button>
                 <button className={"sidebar-nav-item "+(pg==="assets"?"active":"")} onClick={()=>{setPg("assets");setSb(false);}}><IC.List/>資産一覧</button>
