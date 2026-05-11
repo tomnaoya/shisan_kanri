@@ -1108,6 +1108,32 @@ with app.app_context():
         with open(_renumber_v3_flag, "w") as _f:
             _f.write(datetime.utcnow().isoformat())
 
+    # ---- One-shot: 備考欄から「現行採番体系の旧管理番号」のみ削除 ----
+    # v2/v3 で追記された「旧管理番号: XX-NNNNN」(現行体系) を取り除き、
+    # 元々の管理番号 (例: MED-0342) は備考に残す。
+    _cleanup_flag = os.path.join(DATA_DIR, ".cleanup_renumbered_old_codes_done")
+    if not os.path.exists(_cleanup_flag):
+        import re as _re
+        _current_code_re = _re.compile(r"^[ABCDENZ][0-6]-\d{5}$")
+        _cur.execute("SELECT id, notes FROM assets WHERE notes LIKE '%旧管理番号:%'")
+        for _id, _notes in _cur.fetchall():
+            if not _notes:
+                continue
+            _segments = [s.strip() for s in _notes.split(" / ")]
+            _kept = []
+            for _seg in _segments:
+                if _seg.startswith("旧管理番号:"):
+                    _code = _seg[len("旧管理番号:"):].strip()
+                    if _current_code_re.match(_code):
+                        continue
+                _kept.append(_seg)
+            _new_notes = " / ".join(_kept) if _kept else None
+            if _new_notes != _notes:
+                _cur.execute("UPDATE assets SET notes=? WHERE id=?", (_new_notes, _id))
+        _conn.commit()
+        with open(_cleanup_flag, "w") as _f:
+            _f.write(datetime.utcnow().isoformat())
+
     _conn.close()
 
     seed_data()
