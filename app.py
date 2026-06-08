@@ -168,6 +168,7 @@ class Asset(db.Model):
             "manager": self.manager,
             "notes": self.notes,
             "is_deleted": self.is_deleted,
+            "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -553,6 +554,37 @@ def delete_asset(asset_id):
     asset.deleted_at = datetime.utcnow()
     db.session.commit()
     return jsonify({"message": "削除しました"}), 200
+
+
+@app.route("/api/assets/trash", methods=["GET"])
+@jwt_required()
+def list_trash():
+    """List soft-deleted assets (admin only)."""
+    user = get_current_user()
+    if user.role != "admin":
+        return jsonify({"error": "管理者権限が必要です"}), 403
+    assets = (
+        Asset.query.filter_by(is_deleted=True)
+        .order_by(Asset.deleted_at.desc())
+        .all()
+    )
+    return jsonify([a.to_dict() for a in assets])
+
+
+@app.route("/api/assets/<int:asset_id>/restore", methods=["POST"])
+@jwt_required()
+def restore_asset(asset_id):
+    """Restore a soft-deleted asset (admin only)."""
+    user = get_current_user()
+    if user.role != "admin":
+        return jsonify({"error": "管理者権限が必要です"}), 403
+    asset = Asset.query.get_or_404(asset_id)
+    if not asset.is_deleted:
+        return jsonify({"error": "この資産は削除されていません"}), 400
+    asset.is_deleted = False
+    asset.deleted_at = None
+    db.session.commit()
+    return jsonify(asset.to_dict())
 
 
 # ---------------------------------------------------------------------------
