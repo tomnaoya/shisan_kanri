@@ -75,6 +75,13 @@ CATEGORY_REVERSE = {v: k for k, v in CATEGORY_LABELS.items()}
 # Maintenance options: "有", "無", "不明"
 MAINTENANCE_VALUES = {"有", "無", "不明"}
 
+# 閲覧を所属院に制限するスイッチ。
+# True  : 一般ユーザーは自分の所属院の資産のみ閲覧 (admin / サポートチームは全件)
+# False : 全ユーザーが全資産を閲覧できる旧仕様に戻る
+# ↓ 旧仕様に戻したい場合はこの行を False にする (またはコメントアウトして次行を有効化)
+RESTRICT_VIEW_BY_LOCATION = True
+# RESTRICT_VIEW_BY_LOCATION = False  # ← 旧仕様(全件閲覧)に戻すときはこちらを有効化
+
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
@@ -303,6 +310,20 @@ def check_location_permission(user, asset_location):
     return user.location == asset_location
 
 
+def restrict_assets_to_user(query, user):
+    """Limit an Asset query to assets the user is allowed to view.
+
+    admin / サポートチーム see all assets; a regular user sees only
+    assets in their own belonging location.
+    RESTRICT_VIEW_BY_LOCATION を False にすると無効化され全件返す。
+    """
+    if not RESTRICT_VIEW_BY_LOCATION:
+        return query
+    if user.role == "admin" or user.location == "サポートチーム":
+        return query
+    return query.filter(Asset.location == user.location)
+
+
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
@@ -340,7 +361,8 @@ def list_assets():
     user = get_current_user()
     q = Asset.query.filter_by(is_deleted=False)
 
-    # All users can view all assets (edit permission checked separately)
+    # 所属院でフィルタ (admin / サポートチームは全件)
+    q = restrict_assets_to_user(q, user)
 
     # Filters
     category = request.args.get("category")
@@ -467,7 +489,10 @@ def create_asset():
 @app.route("/api/assets/<int:asset_id>", methods=["GET"])
 @jwt_required()
 def get_asset(asset_id):
+    user = get_current_user()
     asset = Asset.query.get_or_404(asset_id)
+    if RESTRICT_VIEW_BY_LOCATION and not check_location_permission(user, asset.location):
+        return jsonify({"error": "この資産の閲覧権限がありません"}), 403
     return jsonify(asset.to_dict())
 
 
@@ -575,8 +600,11 @@ def _asset_row(asset):
 @app.route("/api/assets/download", methods=["GET"])
 @jwt_required()
 def download_assets():
+    user = get_current_user()
     fmt = request.args.get("format", "xlsx")
-    assets = Asset.query.filter_by(is_deleted=False).order_by(Asset.management_code).all()
+    q = Asset.query.filter_by(is_deleted=False)
+    q = restrict_assets_to_user(q, user)
+    assets = q.order_by(Asset.management_code).all()
 
     if fmt == "csv":
         output = io.StringIO()
@@ -948,7 +976,8 @@ def stats():
     user = get_current_user()
     q = Asset.query.filter_by(is_deleted=False)
 
-    # All users can view all stats
+    # 所属院でフィルタ (admin / サポートチームは全件)
+    q = restrict_assets_to_user(q, user)
 
     total = q.count()
     by_category = q.with_entities(Asset.category, db.func.count(Asset.id)).group_by(Asset.category).all()
